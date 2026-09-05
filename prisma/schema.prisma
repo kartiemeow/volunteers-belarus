@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  VOLUNTEER
+  ORGANIZER
+  ADMIN
+}
+
+enum Category {
+  SHELTER // приюты для животных
+  ELDERLY // помощь пожилым
+  PSO // поисково-спасательные отряды (поиск пропавших)
+  URBAN // благоустройство городов
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DONE
+}
+
+enum OpportunityStatus {
+  OPEN
+  CLOSED
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(VOLUNTEER)
+  phone     String?
+  city      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  volunteerProfile    VolunteerProfile?
+  organizationProfile OrganizationProfile?
+
+  newsPosts           NewsPost[]      @relation("NewsAuthor")
+}
+
+model VolunteerProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio           String?
+  skills        String[]
+  interests     Category[]
+  availability  String[] // например: ["Пн, утро", "Сб, весь день"]
+  totalHours    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  applications Application[]
+}
+
+model OrganizationProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgName      String
+  description  String?
+  website      String?
+  verified     Boolean  @default(false)
+  category     Category[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id            String             @id @default(cuid())
+  title         String
+  description   String
+  category      Category
+  city          String
+  address       String?
+  date          DateTime
+  slots         Int                @default(1)
+  filledSlots   Int                @default(0)
+  requirements  String[]
+  status        OpportunityStatus  @default(OPEN)
+  contactInfo   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  organizerId  String
+  organizer    OrganizationProfile @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+
+  applications Application[]
+}
+
+model Application {
+  id             String            @id @default(cuid())
+  status         ApplicationStatus @default(PENDING)
+  message        String?
+  hoursLogged    Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  opportunityId  String
+  opportunity    Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  volunteerId    String
+  volunteer      VolunteerProfile  @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, volunteerId])
+}
+
+model NewsPost {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  excerpt   String
+  content   String
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId String
+  author   User     @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+}

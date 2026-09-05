@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Волонтёры Беларуси
 
-## Getting Started
+Единый координационный центр волонтёрской помощи по 4 направлениям:
 
-First, run the development server:
+- 🐾 Приюты для животных
+- 🤝 Помощь пожилым
+- 🧭 Поиск пропавших (ПСО)
+- 🌳 Благоустройство городов
+
+Стек: **Next.js 16** (App Router, TypeScript, Tailwind CSS 4) · **PostgreSQL** (Neon, serverless) · **Prisma 7** · **Auth.js v5** (email/пароль). Хостинг — Vercel (бесплатный план).
+
+## Возможности
+
+- Каталог заявок с фильтрацией по направлению, городу и тексту
+- Авторизация и три роли: **волонтёр**, **организатор**, **администратор**
+- Личный кабинет волонтёра: профиль, навыки, интересы, отклики, часы помощи
+- Кабинет организатора: верификация, размещение заявок, работа с откликами (одобрить/отклонить/отметить выполненной), учёт часов
+- Админка: статистика, верификация организаций, управление статусами заявок, новости
+- Новости с админ-публикацией
+- Демо-данные через seed
+
+## Запуск локально
+
+1. Установите зависимости:
+
+   ```bash
+   npm install
+   ```
+
+2. Создайте базу данных **Neon** (бесплатно, PostgreSQL 16+). Выдайте строку подключения и положите её в `.env`:
+
+   ```env
+   DATABASE_URL="postgresql://USER:PASSWORD@ep-xxx.region.aws.neon.tech/neondb?sslmode=require"
+   AUTH_SECRET="сгенерируйте любое длинное значение"
+   AUTH_TRUST_HOST="true"
+   ```
+
+   Генерация `AUTH_SECRET`: `openssl rand -base64 32` или просто случайный текст.
+
+   Файл `.env` скопируйте из `.env.example`.
+
+3. Примените схему БД и заполните демо-данными:
+
+   ```bash
+   npx prisma migrate dev --name init
+   npx prisma db seed
+   ```
+
+4. Запустите:
+
+   ```bash
+   npm run dev
+   ```
+
+   Откройте http://localhost:3000
+
+### Демо-аккаунты (после seed, пароль везде `Volunteer-2026!`)
+
+| Роль        | Email                        |
+| ----------- | ---------------------------- |
+| Админ       | admin@volunteers-belarus.by  |
+| Организация | dobroe@example.by            |
+| Волонтёр    | anna@example.by              |
+
+## Деплой на Vercel
+
+1. Создайте **GitHub-репозиторий** и запушьте проект (`.env` уже в `.gitignore`).
+2. На https://vercel.com нажмите **Add New → Project**, выберите репозиторий.
+3. В настройках проекта укажите переменные окружения (те же, что в `.env`): `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST="true"`.
+4. Нажмите **Deploy**. Vercel сам выполнит миграции? **Нет** — их нужно применить вручную (см. ниже).
+
+### Применение миграций на прод-БД
+
+После первого деплоя из локальной машины выполните (с теми же `DATABASE_URL` в `.env`):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx prisma migrate deploy
+npx prisma db seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Vercel Hobby не хранит файловую БД, поэтому миграции применяются из локальной машины к вашей Neon-БД.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Структура проекта
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+prisma/
+  schema.prisma        # модели и энумы
+  seed.ts              # демо-данные
+src/
+  app/                 # маршруты (App Router)
+    (auth)/            # логин и регистрация
+    zayavki/           # каталог заявок и детальная страница
+    volunteer/         # кабинет волонтёра
+    organizer/         # кабинет организатора (в т.ч. /create, управление откликами)
+    admin/             # админка (верификация, новости)
+    novosti/ napravleniya/ about/ kak-eto-rabotaet/ kontakty/   # инфо-страницы
+  lib/
+    db.ts              # Prisma-клиент с драйвером pg
+    auth.ts            # Auth.js v5
+    guards.ts actions/ # гварды ролей и server actions
+  components/          # UI и клиентские формы
+  generated/prisma     # сгенерированный Prisma Client (в .gitignore)
+```
 
-## Learn More
+## Команды
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Команда                  | Что делает                                  |
+| ------------------------ | ------------------------------------------- |
+| `npm run dev`            | Dev-сервер                                  |
+| `npm run build`          | Продакшен-сборка                            |
+| `npm run lint`           | Линтер                                      |
+| `npx prisma migrate dev` | Создать/применить миграцию в dev            |
+| `npx prisma db seed`     | Заполнить демо-данными                      |
+| `npx next typegen`       | Перегенерировать типы маршрутов (PageProps) |
