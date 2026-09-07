@@ -3,6 +3,7 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { cookies, headers } from "next/headers";
 import { AuthError } from "next-auth";
 
 import { db } from "@/lib/db";
@@ -86,6 +87,7 @@ export async function loginUser(
   const email = String(formData.get("email") ?? "").toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "");
+  const remember = formData.get("remember") === "1";
 
   try {
     await signIn("credentials", { email, password, redirect: false });
@@ -94,6 +96,21 @@ export async function loginUser(
       return { error: "Неверный email или пароль" };
     }
     throw error;
+  }
+
+  const proto = (await headers()).get("x-forwarded-proto") ?? "http";
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore
+    .getAll()
+    .find((c) => c.name.includes("session-token"));
+  if (sessionCookie) {
+    cookieStore.set(sessionCookie.name, sessionCookie.value, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: proto === "https",
+      path: "/",
+      ...(remember ? { maxAge: 30 * 24 * 60 * 60 } : {}),
+    });
   }
 
   const session = await auth();

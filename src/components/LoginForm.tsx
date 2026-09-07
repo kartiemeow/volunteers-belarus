@@ -24,6 +24,16 @@ export default function LoginForm({ next }: { next?: string }) {
         <Input label="Пароль" name="password" type="password" required autoComplete="current-password" placeholder="Ваш пароль" />
       </div>
 
+      <label className="flex items-center gap-2.5 text-sm text-gray-600">
+        <input
+          type="checkbox"
+          name="remember"
+          value="1"
+          className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0"
+        />
+        <span>Запомнить меня</span>
+      </label>
+
       <button
         type="submit"
         disabled={pending}
