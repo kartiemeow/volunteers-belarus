@@ -8,7 +8,7 @@ export default async function LoginPage(
   const session = await auth();
   if (session?.user) redirect("/");
 
-  const { next, verified } = await props.searchParams;
+  const { next } = await props.searchParams;
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
@@ -18,11 +18,6 @@ export default async function LoginPage(
           <p className="mb-6 text-sm text-gray-600">
             Рады видеть вас снова
           </p>
-          {typeof verified === "string" && (
-            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Почта подтверждена! Войдите, чтобы продолжить.
-            </div>
-          )}
           <LoginForm
             next={
               typeof next === "string" && next.startsWith("/") && !next.startsWith("//")
