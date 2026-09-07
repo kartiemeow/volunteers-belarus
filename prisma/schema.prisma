@@ -63,12 +63,18 @@ model User {
 }
 
 model EmailVerification {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  codeHash  String
-  attempts  Int      @default(0)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  email        String   @unique
+  codeHash     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  name         String
+  passwordHash String
+  role         Role
+  phone        String?
+  city         String?
 
   @@index([email])
 }

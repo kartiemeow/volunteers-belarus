@@ -34,7 +34,16 @@ export type RegisterState =
   | { message: string }
   | undefined;
 
-async function createAndSendVerification(email: string): Promise<{ error?: string }> {
+async function sendVerificationCode(
+  email: string,
+  pending?: {
+    name: string;
+    passwordHash: string;
+    role: Role;
+    phone: string | null;
+    city: string | null;
+  }
+): Promise<{ error?: string }> {
   const code = generateVerificationCode();
   const codeHash = hashVerificationCode(code);
 
@@ -50,6 +59,11 @@ async function createAndSendVerification(email: string): Promise<{ error?: strin
       email,
       codeHash,
       expiresAt: new Date(Date.now() + CODE_TTL_MS),
+      name: pending?.name ?? "",
+      passwordHash: pending?.passwordHash ?? "",
+      role: pending?.role ?? "VOLUNTEER",
+      phone: pending?.phone,
+      city: pending?.city,
     },
   });
 
@@ -89,29 +103,13 @@ export async function registerUser(
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = await db.user.create({
-    data: {
-      name: name.trim(),
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role: role as Role,
-      phone: phone || null,
-      city: city || null,
-    },
+  const sendResult = await sendVerificationCode(email.toLowerCase(), {
+    name: name.trim(),
+    passwordHash: hashedPassword,
+    role: role as Role,
+    phone: phone || null,
+    city: city || null,
   });
-
-  if (role === "VOLUNTEER") {
-    await db.volunteerProfile.create({ data: { userId: user.id } });
-  } else {
-    await db.organizationProfile.create({
-      data: {
-        userId: user.id,
-        orgName: name.trim(),
-      },
-    });
-  }
-
-  const sendResult = await createAndSendVerification(email.toLowerCase());
   if (sendResult.error) {
     return { error: sendResult.error };
   }
@@ -130,17 +128,9 @@ export async function verifyEmailAction(
     return { error: "Введите код из письма" };
   }
 
-  const user = await db.user.findUnique({ where: { email } });
-  if (!user) {
-    return { error: "Пользователь не найден. Зарегистрируйтесь заново." };
-  }
-  if (user.emailVerified) {
-    redirect(`/login?verified=${encodeURIComponent(email)}`);
-  }
-
   const verification = await db.emailVerification.findUnique({ where: { email } });
   if (!verification) {
-    return { error: "Код не найден. Запросите новый код." };
+    return { error: "Регистрация не найдена. Зарегистрируйтесь заново." };
   }
   if (Date.now() > verification.expiresAt.getTime()) {
     return { error: "Срок действия кода истёк. Запросите новый код." };
@@ -163,10 +153,39 @@ export async function verifyEmailAction(
     };
   }
 
-  await db.user.update({
-    where: { id: user.id },
-    data: { emailVerified: new Date() },
-  });
+  let userId: string;
+  try {
+    const user = await db.user.create({
+      data: {
+        name: verification.name,
+        email,
+        password: verification.passwordHash,
+        role: verification.role,
+        phone: verification.phone,
+        city: verification.city,
+        emailVerified: new Date(),
+      },
+    });
+    userId = user.id;
+  } catch (err) {
+    const prismaErr = err as { code?: string };
+    if (prismaErr.code === "P2002") {
+      return { error: "Пользователь с таким email уже зарегистрирован" };
+    }
+    throw err;
+  }
+
+  if (verification.role === "VOLUNTEER") {
+    await db.volunteerProfile.create({ data: { userId } });
+  } else {
+    await db.organizationProfile.create({
+      data: {
+        userId,
+        orgName: verification.name,
+      },
+    });
+  }
+
   await db.emailVerification.delete({ where: { email } });
 
   redirect(`/login?verified=${encodeURIComponent(email)}`);
@@ -192,7 +211,13 @@ export async function resendVerificationAction(
     return { error: `Подождите ${secondsLeft} сек. перед повторной отправкой` };
   }
 
-  const sendResult = await createAndSendVerification(email);
+  const sendResult = await sendVerificationCode(email, {
+    name: existing?.name ?? "",
+    passwordHash: existing?.passwordHash ?? "",
+    role: existing?.role ?? "VOLUNTEER",
+    phone: existing?.phone ?? null,
+    city: existing?.city ?? null,
+  });
   if (sendResult.error) {
     return { error: sendResult.error };
   }
@@ -209,8 +234,11 @@ export async function loginUser(
   const remember = formData.get("remember") === "1";
 
   const existingUser = await db.user.findUnique({ where: { email } });
-  if (existingUser && !existingUser.emailVerified) {
-    redirect(`/register/verify?email=${encodeURIComponent(email)}`);
+  if (!existingUser) {
+    const pending = await db.emailVerification.findUnique({ where: { email } });
+    if (pending) {
+      redirect(`/register/verify?email=${encodeURIComponent(email)}`);
+    }
   }
 
   try {
