@@ -182,6 +182,21 @@ export default function Header({
                   >
                     Личный кабинет
                   </Link>
+                  {user.role === "ORGANIZER" && (
+                    <Link
+                      href="/organizer/create"
+                      onClick={() => setMobileOpen(false)}
+                      className="block rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Создать заявку
+                    </Link>
+                  )}
+                  <div className="flex items-center justify-between rounded-lg px-3 py-1.5">
+                    <span className="text-sm font-medium text-gray-700">
+                      Уведомления
+                    </span>
+                    <NotificationBell notifications={notifications} />
+                  </div>
                   <button
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
