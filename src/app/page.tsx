@@ -30,6 +30,12 @@ const DIRECTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   URBAN: IconTree,
 };
 
+const DIRECTION_ICON_LAYOUT: Record<string, { box: string; icon: string }> = {
+  ELDERLY: { box: "h-14 w-14", icon: "h-9 w-9" },
+};
+const DEFAULT_ICON_BOX = "h-10 w-10";
+const DEFAULT_ICON_SIZE = "h-6 w-6";
+
 export default async function HomePage() {
   const [recentOpportunities, stats] = await Promise.all([
     db.opportunity.findMany({
@@ -134,8 +140,14 @@ export default async function HomePage() {
                 href={`/zayavki?category=${key}`}
                 className={`group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-md ${CATEGORY_COLORS[key]}`}
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                  <Icon className="h-6 w-6" />
+                <span
+                  className={`flex ${
+                    DIRECTION_ICON_LAYOUT[key]?.box ?? DEFAULT_ICON_BOX
+                  } items-center justify-center rounded-lg bg-emerald-50 text-emerald-600`}
+                >
+                  <Icon
+                    className={DIRECTION_ICON_LAYOUT[key]?.icon ?? DEFAULT_ICON_SIZE}
+                  />
                 </span>
                 <h3 className="mt-4 text-lg font-bold text-gray-900">
                   {CATEGORY_LABELS[key]}
