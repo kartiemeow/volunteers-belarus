@@ -113,8 +113,8 @@ export default async function OrganizerDashboardPage() {
               ? `Срок отметки явки истёк для ${overdueAttendance} заявки(ок)! `
               : "Не забудьте отметить явку волонтёров. "}
           </strong>
-          {totalAttendance} волонтёр(а) участвовали в прошедших заявках — после
-          события явку нужно отметить в течение 3 дней.
+{totalAttendance} волонтёр(а) участвовали в прошедших заявках. После
+события явку нужно отметить в течение 3 дней.
           <Link
             href="#attendance"
             className="ml-2 font-semibold underline hover:no-underline"
@@ -159,7 +159,7 @@ export default async function OrganizerDashboardPage() {
                   <div>
                     <div className="font-semibold text-gray-900">{o.title}</div>
                     <div className="text-sm text-gray-500">
-                      {formatDate(o.date)} · {o.city} · явку нужно отметить{" "}
+                      {formatDate(o.date)}, {o.city}, явку нужно отметить{" "}
                       {o.applications.length} волонтёрам
                     </div>
                   </div>
@@ -172,7 +172,7 @@ export default async function OrganizerDashboardPage() {
                     }`}
                   >
                     {isOverdue
-                      ? `Срок истёк ${formatDate(deadline)} — отметить!`
+                      ? `Срок истёк ${formatDate(deadline)}, отметить!`
                       : `До ${formatDate(deadline)}`}
                   </Link>
                 </div>
@@ -189,7 +189,7 @@ export default async function OrganizerDashboardPage() {
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
           <p className="text-lg font-medium text-gray-700">Заявок пока нет</p>
           <p className="mt-1 text-gray-500">
-            Разместите первую заявку — волонтёры увидят её в каталоге.
+            Разместите первую заявку, и волонтёры увидят её в каталоге.
           </p>
           <Link
             href="/organizer/create"
@@ -277,7 +277,7 @@ export default async function OrganizerDashboardPage() {
                   {CATEGORY_SHORT[o.category]}
                 </span>
                 <span>{o.city}</span>
-                <span>· откликов: {o._count.applications}</span>
+                <span>откликов: {o._count.applications}</span>
                 {o.applications.length > 0 && (
                   <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
                     {o.applications.length} новых

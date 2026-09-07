@@ -16,7 +16,7 @@ const volunteerProfileSchema = z.object({
   bio: z.string().max(1000).optional().or(z.literal("")),
   skills: z.string().max(1000).optional().or(z.literal("")),
   interests: z.array(z.enum(CATEGORY_ORDER)).optional(),
-  availability: z.string().max(1000).optional().or(z.literal("")),
+  availability: z.array(z.string().max(60)).max(50).optional(),
 });
 
 export async function updateVolunteerProfile(
@@ -34,7 +34,7 @@ export async function updateVolunteerProfile(
     bio: formData.get("bio"),
     skills: formData.get("skills"),
     interests,
-    availability: formData.get("availability"),
+    availability: formData.getAll("availability"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверьте данные" };
@@ -58,13 +58,13 @@ export async function updateVolunteerProfile(
       bio: bio || null,
       skills: parseList(skills),
       interests: interestsOk ?? [],
-      availability: parseList(availability),
+      availability: availability ?? [],
     },
     update: {
       bio: bio || null,
       skills: parseList(skills),
       interests: interestsOk ?? [],
-      availability: parseList(availability),
+      availability: availability ?? [],
     },
   });
 

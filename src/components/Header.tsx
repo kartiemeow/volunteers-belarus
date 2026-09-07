@@ -12,6 +12,7 @@ import NotificationBell, {
 const NAV_LINKS = [
   { href: "/", label: "Главная" },
   { href: "/zayavki", label: "Заявки" },
+  { href: "/organizacii", label: "Организации" },
   { href: "/napravleniya", label: "Направления" },
   { href: "/novosti", label: "Новости" },
   { href: "/about", label: "О проекте" },

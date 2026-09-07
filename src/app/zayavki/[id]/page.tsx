@@ -184,7 +184,7 @@ export default async function OpportunityPage(
                 {ratingAgg._count > 0 && (
                   <div className="mt-0.5 flex items-center gap-1 text-sm font-medium text-amber-500">
                     <IconStar className="h-4 w-4 fill-amber-500 text-amber-500" />
-                    {ratingAgg._avg.score?.toFixed(1) ?? "—"}{" "}
+                    {ratingAgg._avg.score?.toFixed(1) ?? "-"}{" "}
                     <span className="text-xs font-normal text-gray-400">
                       ({ratingAgg._count} оценок)
                     </span>

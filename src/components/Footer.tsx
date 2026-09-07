@@ -25,6 +25,7 @@ export default function Footer() {
             <p className="mb-3 text-sm font-semibold text-gray-900">Навигация</p>
             <ul className="space-y-2 text-sm text-gray-600">
               <li><Link href="/zayavki" className="hover:text-emerald-600">Заявки</Link></li>
+              <li><Link href="/organizacii" className="hover:text-emerald-600">Организации</Link></li>
               <li><Link href="/napravleniya" className="hover:text-emerald-600">Направления</Link></li>
               <li><Link href="/novosti" className="hover:text-emerald-600">Новости</Link></li>
               <li><Link href="/kak-eto-rabotaet" className="hover:text-emerald-600">Как это работает</Link></li>

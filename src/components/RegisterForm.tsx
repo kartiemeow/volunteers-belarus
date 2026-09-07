@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 
 import { registerUser } from "@/lib/actions/auth-actions";
-import { Input, FormMessage } from "@/components/ui";
+import { Input, PhoneInput, CityInput, FormMessage } from "@/components/ui";
 import type { RegisterState } from "@/lib/actions/auth-actions";
 
 export default function RegisterForm({
@@ -16,6 +16,7 @@ export default function RegisterForm({
     registerUser,
     undefined
   );
+  const [role, setRole] = useState<"VOLUNTEER" | "ORGANIZER">(initialRole);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -28,21 +29,40 @@ export default function RegisterForm({
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 p-3 text-sm font-medium text-gray-700 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-700">
-              <input type="radio" name="role" value="VOLUNTEER" defaultChecked={initialRole === "VOLUNTEER"} className="accent-emerald-600" />
+              <input
+                type="radio"
+                name="role"
+                value="VOLUNTEER"
+                checked={role === "VOLUNTEER"}
+                onChange={() => setRole("VOLUNTEER")}
+                className="accent-emerald-600"
+              />
               Волонтёр
             </label>
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 p-3 text-sm font-medium text-gray-700 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-700">
-              <input type="radio" name="role" value="ORGANIZER" defaultChecked={initialRole === "ORGANIZER"} className="accent-emerald-600" />
+              <input
+                type="radio"
+                name="role"
+                value="ORGANIZER"
+                checked={role === "ORGANIZER"}
+                onChange={() => setRole("ORGANIZER")}
+                className="accent-emerald-600"
+              />
               Организация
             </label>
           </div>
         </div>
 
-        <Input label="Имя / Название организации" name="name" required placeholder="Как к вам обращаться" />
+        <Input
+          label={role === "VOLUNTEER" ? "Имя" : "Название организации"}
+          name="name"
+          required
+          placeholder={role === "VOLUNTEER" ? "Как к вам обращаться" : "Например, центр «Надежда»"}
+        />
         <Input label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
         <Input label="Пароль" name="password" type="password" required autoComplete="new-password" placeholder="Минимум 8 символов" />
-        <Input label="Телефон (необязательно)" name="phone" type="tel" placeholder="+375 ..." />
-        <Input label="Город (необязательно)" name="city" placeholder="Минск" />
+        <PhoneInput label="Телефон (необязательно)" name="phone" />
+        <CityInput label="Город (необязательно)" name="city" />
       </div>
 
       <button

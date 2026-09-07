@@ -55,8 +55,8 @@ export default async function AdminNewsPage() {
             <div>
               <div className="font-semibold text-gray-900">{p.title}</div>
               <div className="mt-0.5 text-sm text-gray-500">
-                /novosti/{p.slug} · {formatDate(p.createdAt)}
-                {p.author.name ? ` · ${p.author.name}` : ""}
+                /novosti/{p.slug}, {formatDate(p.createdAt)}
+                {p.author.name ? `, ${p.author.name}` : ""}
               </div>
             </div>
             <div className="flex items-center gap-2">

@@ -125,7 +125,7 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
 
   await sendEmail(
     to,
-    "Код подтверждения — Волонтёры Беларуси",
+    "Код подтверждения: Волонтёры Беларуси",
     `<div style="font-family:Arial,'Segoe UI',sans-serif;background:#f6f7f9;padding:24px;">
       <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px;border:1px solid #e5e7eb;">
         <h2 style="margin:0 0 12px;color:#111827;font-size:20px;">Волонтёры Беларуси</h2>
@@ -139,7 +139,7 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
           Код действует 10 минут. Введите его на странице подтверждения, чтобы завершить регистрацию.
         </p>
         <p style="margin:16px 0 0;color:#9ca3af;font-size:12px;line-height:1.5;">
-          Если вы не регистрировались на платформе — просто проигнорируйте это письмо.<br/>
+          Если вы не регистрировались на платформе, просто проигнорируйте это письмо.<br/>
           <a href="${siteUrl}" style="color:#059669;">${siteUrl}</a>
         </p>
       </div>

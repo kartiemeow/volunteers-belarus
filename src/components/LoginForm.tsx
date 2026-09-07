@@ -29,7 +29,7 @@ export default function LoginForm({ next }: { next?: string }) {
           type="checkbox"
           name="remember"
           value="1"
-          className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0"
+          className="h-4 w-4 rounded border-gray-300 text-emerald-600 accent-emerald-600 focus:ring-emerald-500 focus:ring-offset-0"
         />
         <span>Запомнить меня</span>
       </label>

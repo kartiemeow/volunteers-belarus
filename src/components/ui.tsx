@@ -1,4 +1,8 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+
+import { BELARUS_CITIES } from "@/lib/constants";
 
 export function Input({
   label,
@@ -56,6 +60,152 @@ export function Input({
   );
 }
 
+export function PhoneInput({
+  label,
+  name = "phone",
+  required,
+  defaultValue,
+}: {
+  label: string;
+  name?: string;
+  required?: boolean;
+  defaultValue?: string;
+}) {
+  const format = (raw: string): string => {
+    const digits = raw.replace(/\D/g, "").replace(/^8/, "7").slice(0, 12);
+    if (!digits) return "";
+    let out = "+" + digits.slice(0, 1);
+    if (digits.length > 1) out += " (" + digits.slice(1, 4);
+    if (digits.length > 4) out += ") " + digits.slice(4, 7);
+    if (digits.length > 7) out += "-" + digits.slice(7, 9);
+    if (digits.length > 9) out += "-" + digits.slice(9, 11);
+    return out;
+  };
+
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-gray-700">
+        {label}
+      </span>
+      <input
+        type="tel"
+        name={name}
+        required={required}
+        inputMode="tel"
+        autoComplete="tel-national"
+        defaultValue={defaultValue ? format(defaultValue) : ""}
+        onInput={(e) => {
+          e.currentTarget.value = format(e.currentTarget.value);
+        }}
+        placeholder="+375 (29) 123-45-67"
+        className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+      />
+    </label>
+  );
+}
+
+export function CityInput({
+  label,
+  name = "city",
+  required,
+  defaultValue,
+}: {
+  label: string;
+  name?: string;
+  required?: boolean;
+  defaultValue?: string;
+}) {
+  const [value, setValue] = useState(defaultValue ?? "");
+  const [show, setShow] = useState(false);
+  const [hi, setHi] = useState(-1);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const matched = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return BELARUS_CITIES.slice();
+    return BELARUS_CITIES.filter((c) => c.toLowerCase().includes(q));
+  }, [value]);
+
+  const pick = (city: string, close = true) => {
+    setValue(city);
+    if (close) setShow(false);
+    setHi(-1);
+  };
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setShow(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  return (
+    <div className="block">
+      <span className="mb-1.5 block text-sm font-medium text-gray-700">
+        {label}
+      </span>
+      <div ref={wrapRef} className="relative">
+        <input
+          type="text"
+          name={name}
+          required={required}
+          value={value}
+          autoComplete="off"
+          onChange={(e) => {
+            setValue(e.target.value);
+            setShow(true);
+            setHi(-1);
+          }}
+          onFocus={() => setShow(true)}
+          onKeyDown={(e) => {
+            if (!show) return;
+            if (e.key === "ArrowDown" && hi < matched.length - 1) {
+              e.preventDefault();
+              setHi(hi + 1);
+            } else if (e.key === "ArrowUp" && hi > 0) {
+              e.preventDefault();
+              setHi(hi - 1);
+            } else if (e.key === "Enter") {
+              if (hi >= 0 && matched[hi]) {
+                e.preventDefault();
+                pick(matched[hi]);
+              } else {
+                setShow(false);
+              }
+            } else if (e.key === "Escape") {
+              setShow(false);
+            }
+          }}
+          className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        />
+        {show && matched.length > 0 && (
+          <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+            {matched.map((city, i) => (
+              <li key={city}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    pick(city);
+                  }}
+                  onMouseEnter={() => setHi(i)}
+                  className={`block w-full px-3.5 py-2 text-left text-sm ${
+                    i === hi ? "bg-emerald-50 text-emerald-700" : "text-gray-700"
+                  }`}
+                >
+                  {city}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Textarea({
   label,
   name,
@@ -71,18 +221,33 @@ export function Textarea({
   rows?: number;
   defaultValue?: string;
 }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const autoGrow = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    autoGrow();
+  }, []);
+
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-gray-700">
         {label}
       </span>
       <textarea
+        ref={ref}
         name={name}
         required={required}
         placeholder={placeholder}
         rows={rows}
         defaultValue={defaultValue}
-        className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        onInput={autoGrow}
+        className="block w-full resize-none overflow-hidden rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
     </label>
   );

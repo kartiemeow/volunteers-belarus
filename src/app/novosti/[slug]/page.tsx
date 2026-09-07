@@ -40,12 +40,6 @@ export default async function NewsPostPage(
         <time dateTime={post.createdAt.toISOString()}>
           {formatDate(post.createdAt)}
         </time>
-        {post.author.name && (
-          <>
-            <span>·</span>
-            <span>{post.author.name}</span>
-          </>
-        )}
       </div>
 
       <h1 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">

@@ -58,16 +58,13 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-0 opacity-10 [background-image:radial-gradient(circle_at_20%_20%,white_1px,transparent_1px)] [background-size:28px_28px]" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
           <div className="max-w-2xl">
-            <p className="mb-4 inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider">
-              Единый координационный центр
-            </p>
             <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl">
-              Помогать стало проще. Вся волонтёрская помощь Беларуси — в одном
-              месте.
+Помогать стало проще. Вся волонтёрская помощь Беларуси в одном
+месте.
             </h1>
             <p className="mt-5 max-w-xl text-lg text-emerald-50">
               Находите заявки от приютов, социальных служб, поисковых отрядов и
-              городских инициатив. Откликайтесь, участвуйте, меняйте мир вокруг.
+              городских инициатив, откликайтесь и участвуйте.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -114,7 +111,7 @@ export default async function HomePage() {
               Направления помощи
             </h2>
             <p className="mt-2 text-gray-600">
-              Выберите, кому хотите помочь — и найдите заявку рядом с вами.
+              Выберите, кому хотите помочь, и найдите заявку рядом с вами.
             </p>
           </div>
           <Link

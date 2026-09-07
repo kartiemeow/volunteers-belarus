@@ -21,7 +21,7 @@ export default function RateOrganizationForm({
     undefined
   );
 
-  const SCORE_LABELS = ["1 — ужасно", "2 — плохо", "3 — нормально", "4 — хорошо", "5 — отлично"];
+  const SCORE_LABELS = ["1: ужасно", "2: плохо", "3: нормально", "4: хорошо", "5: отлично"];
 
   return (
     <div className="mx-auto max-w-xl px-4 py-12 sm:px-6">

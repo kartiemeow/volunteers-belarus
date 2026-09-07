@@ -74,9 +74,9 @@ export default async function ManageOpportunityPage(
               <IconMapPin className="h-4 w-4 text-emerald-600" />
               {opportunity.city}
             </span>
-            <span>· {formatDate(opportunity.date)}</span>
+            <span>{formatDate(opportunity.date)}</span>
             <span>
-              · мест: {opportunity.filledSlots}/{opportunity.slots}
+              мест: {opportunity.filledSlots}/{opportunity.slots}
             </span>
           </div>
         </div>
@@ -98,7 +98,7 @@ export default async function ManageOpportunityPage(
       </h2>
       <div className="rounded-2xl border border-gray-200 bg-white p-6">
         <p className="mb-4 text-sm text-gray-500">
-          Если дата или время события изменились — обновите их здесь.
+          Если дата или время события изменились, обновите их здесь.
           Откликнувшиеся волонтёры получат уведомление и смогут подтвердить
           участие заново или отказаться.
         </p>
@@ -118,7 +118,7 @@ export default async function ManageOpportunityPage(
             Откликов пока нет
           </p>
           <p className="mt-1 text-gray-500">
-            Заявка опубликована в каталоге — волонтёры могут откликнуться.
+            Заявка опубликована в каталоге, волонтёры могут откликнуться.
           </p>
         </div>
       ) : (
@@ -136,10 +136,10 @@ export default async function ManageOpportunityPage(
                   <div className="mt-0.5 text-sm text-gray-500">
                     {a.volunteer.user.email}
                     {a.volunteer.user.phone && (
-                      <span> · {a.volunteer.user.phone}</span>
+                      <span>, {a.volunteer.user.phone}</span>
                     )}
                     {a.volunteer.totalHours > 0 && (
-                      <span> · ⏱ {a.volunteer.totalHours} ч помощи</span>
+                      <span>, ⏱ {a.volunteer.totalHours} ч помощи</span>
                     )}
                   </div>
                   {reliabilityOf(a.volunteer.applications).isUnreliable && (
@@ -200,9 +200,9 @@ export default async function ManageOpportunityPage(
                     <>
                       <span className="text-sm text-gray-500">
                         Отметьте явку волонтёра{overdue(opportunity.date) ? (
-                          <strong className="text-red-600"> — срок истёк!</strong>
+                          <strong className="text-red-600">: срок истёк!</strong>
                         ) : (
-                          <strong> — до {deadline(opportunity.date)}</strong>
+                          <strong>: до {deadline(opportunity.date)}</strong>
                         )}
                       </span>
                       <form action={setApplicationStatus}>

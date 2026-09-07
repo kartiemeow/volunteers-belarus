@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import { applyToOpportunity } from "@/lib/actions/application-actions";
 import { Textarea, FormMessage } from "@/components/ui";
+import { ConfettiBurst } from "@/components/ConfettiBurst";
 import type { ApplicationState } from "@/lib/actions/application-actions";
 
 export function ApplyButton({
@@ -14,27 +16,35 @@ export function ApplyButton({
     applyToOpportunity,
     undefined
   );
+  const [closed, setClosed] = useState(false);
+  const success = state?.success;
+  const showPopup = success && !closed;
 
   return (
-    <form action={formAction} className="space-y-3">
-      <input type="hidden" name="opportunityId" value={opportunityId} />
-      <FormMessage state={state} />
-      <div>
-        <Textarea
-          label="Сообщение организатору (необязательно)"
-          name="message"
-          placeholder="Коротко расскажите, почему хотите помочь: опыт, доступное время, транспорт..."
-          rows={3}
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-      >
-        {pending ? "Отправляем..." : "Откликнуться"}
-      </button>
-    </form>
+    <>
+      <form action={formAction} className="space-y-3">
+        <input type="hidden" name="opportunityId" value={opportunityId} />
+        {showPopup ? null : <FormMessage state={state} />}
+        <div>
+          <Textarea
+            label="Сообщение организатору (необязательно)"
+            name="message"
+            placeholder="Коротко расскажите, почему хотите помочь: опыт, доступное время, транспорт..."
+            rows={3}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {pending ? "Отправляем..." : "Откликнуться"}
+        </button>
+      </form>
+      {showPopup && (
+        <ConfettiBurst message={success} onClose={() => setClosed(true)} />
+      )}
+    </>
   );
 }
 

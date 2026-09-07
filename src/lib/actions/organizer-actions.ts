@@ -37,13 +37,12 @@ export async function setApplicationStatus(formData: FormData) {
 
   if (status === "APPROVED" && application.status !== "APPROVED") {
     if (opportunity.filledSlots >= opportunity.slots) return;
-    await db.opportunity.update({
-      where: { id: opportunity.id },
-      data: { filledSlots: { increment: 1 } },
-    });
   }
 
-  if (application.status === "APPROVED" && status !== "APPROVED") {
+  const heldBefore =
+    application.status === "PENDING" || application.status === "APPROVED";
+  const holdsAfter = status === "PENDING" || status === "APPROVED";
+  if (heldBefore && !holdsAfter) {
     await db.opportunity.update({
       where: { id: opportunity.id },
       data: { filledSlots: { decrement: 1 } },
@@ -98,6 +97,7 @@ export async function setApplicationStatus(formData: FormData) {
   revalidatePath(`/organizer/opportunities/${opportunity.id}`);
   revalidatePath("/organizer");
   revalidatePath("/volunteer");
+  revalidatePath("/zayavki");
 }
 
 export async function setApplicationHours(formData: FormData) {

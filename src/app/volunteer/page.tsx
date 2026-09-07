@@ -111,8 +111,8 @@ export default async function VolunteerDashboardPage({
 
       {reliability.resolved === 0 && (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
-          Отличное начало! Выполняйте заявки — организации будут видеть вашу
-          надёжность и охотнее брать вас на помощь.
+Отличное начало! Выполняйте заявки, и организации будут видеть вашу
+надёжность и охотнее брать вас на помощь.
         </div>
       )}
 
@@ -192,8 +192,7 @@ export default async function VolunteerDashboardPage({
                       <IconMapPin className="h-4 w-4 text-emerald-600" />
                       {a.opportunity.city}
                     </span>
-                      <span>· {formatDate(a.opportunity.date)}</span>
-                      <span>· {a.opportunity.organizer.user.name}</span>
+                      <span>{formatDate(a.opportunity.date)}, {a.opportunity.organizer.user.name}</span>
                     </div>
                   </div>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_COLORS[a.status]}`}>
@@ -216,15 +215,15 @@ export default async function VolunteerDashboardPage({
 
                 {a.status === "REJECTED" && (
                   <p className="mt-3 text-sm text-gray-500">
-                    К сожалению, организатор отклонил ваш отклик. Не расстраивайтесь —
-                    попробуйте другие заявки.
+К сожалению, организатор отклонил ваш отклик. Не расстраивайтесь,
+попробуйте другие заявки.
                   </p>
                 )}
 
                 {a.status === "NO_SHOW" && (
                   <p className="mt-3 text-sm text-rose-600">
                     Организация отметила, что вы не явились. Напишите ей, если
-                    это ошибка — от вас зависит рейтинг надёжности.
+                    это ошибка, от вас зависит рейтинг надёжности.
                   </p>
                 )}
 

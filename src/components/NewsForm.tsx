@@ -24,7 +24,7 @@ export function NewsForm() {
         placeholder="subbotnik-v-parke"
       />
       <Textarea
-        label="Анонс (1–2 предложения)"
+        label="Анонс (1-2 предложения)"
         name="excerpt"
         rows={2}
         placeholder="Короткое описание для списка новостей"

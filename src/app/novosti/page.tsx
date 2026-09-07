@@ -48,12 +48,6 @@ export default async function NovostiPage() {
                   <time dateTime={post.createdAt.toISOString()}>
                     {formatDate(post.createdAt)}
                   </time>
-                  {post.author.name && (
-                    <>
-                      <span>·</span>
-                      <span>{post.author.name}</span>
-                    </>
-                  )}
                 </div>
                 <Link
                   href={`/novosti/${post.slug}`}

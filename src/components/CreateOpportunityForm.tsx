@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import { createOpportunity } from "@/lib/actions/opportunity-actions";
-import { Input, Textarea, Select, FormMessage } from "@/components/ui";
+import { Input, Textarea, Select, CityInput, FormMessage } from "@/components/ui";
 import type { OpportunityFormState } from "@/lib/actions/opportunity-actions";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "@/lib/constants";
 
@@ -29,7 +29,7 @@ export function CreateOpportunityForm({ minDate }: { minDate: string }) {
         name="description"
         required
         rows={5}
-        placeholder="Что нужно сделать, кому помогаем, какие условия — чем подробнее, тем лучше"
+        placeholder="Что нужно сделать, кому помогаем, какие условия. Чем подробнее, тем лучше"
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -44,7 +44,7 @@ export function CreateOpportunityForm({ minDate }: { minDate: string }) {
           }))}
         />
 
-        <Input label="Город" name="city" required placeholder="Например: Минск" />
+        <CityInput label="Город" name="city" required />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

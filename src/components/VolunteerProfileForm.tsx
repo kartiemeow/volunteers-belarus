@@ -1,11 +1,27 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { updateVolunteerProfile } from "@/lib/actions/profile-actions";
-import { Input, Textarea, FormMessage } from "@/components/ui";
+import {
+  Input,
+  Textarea,
+  PhoneInput,
+  CityInput,
+  FormMessage,
+} from "@/components/ui";
 import type { ProfileState } from "@/lib/actions/profile-actions";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "@/lib/constants";
+
+const AVAILABILITY_OPTIONS = [
+  "будни утро",
+  "будни день",
+  "будни вечер",
+  "выходные утро",
+  "выходные день",
+  "выходные вечер",
+  "готов выезжать",
+] as const;
 
 export function VolunteerProfileForm({
   name,
@@ -28,6 +44,13 @@ export function VolunteerProfileForm({
     updateVolunteerProfile,
     undefined
   );
+  const [selected, setSelected] = useState<string[]>(availability);
+
+  const toggle = (opt: string) => {
+    setSelected((prev) =>
+      prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt]
+    );
+  };
 
   return (
     <form action={formAction} className="space-y-5">
@@ -35,9 +58,9 @@ export function VolunteerProfileForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input label="Имя" name="name" required defaultValue={name} />
-        <Input label="Телефон" name="phone" type="tel" defaultValue={phone} />
+        <PhoneInput label="Телефон" name="phone" defaultValue={phone} />
       </div>
-      <Input label="Город" name="city" defaultValue={city} />
+      <CityInput label="Город" name="city" defaultValue={city} />
 
       <Textarea
         label="О себе"
@@ -78,13 +101,39 @@ export function VolunteerProfileForm({
         </div>
       </div>
 
-      <Textarea
-        label="Доступность (через запятую)"
-        name="availability"
-        placeholder="Например: будни вечером, выходные весь день"
-        defaultValue={availability.join(", ")}
-        rows={2}
-      />
+      <div>
+        <span className="mb-1.5 block text-sm font-medium text-gray-700">
+          Доступность
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {AVAILABILITY_OPTIONS.map((opt) => {
+            const active = selected.includes(opt);
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => toggle(opt)}
+                className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "border-emerald-600 bg-emerald-600 text-white"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-emerald-400 hover:bg-emerald-50"
+                }`}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+        {AVAILABILITY_OPTIONS.map((opt) => (
+          <input
+            key={opt}
+            type="hidden"
+            name="availability"
+            value={opt}
+            disabled={!selected.includes(opt)}
+          />
+        ))}
+      </div>
 
       <button
         type="submit"

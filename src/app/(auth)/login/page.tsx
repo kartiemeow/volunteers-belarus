@@ -11,9 +11,9 @@ export default async function LoginPage(
   const { next, verified } = await props.searchParams;
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
+    <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center px-4 py-6 sm:py-12">
       <div className="w-full max-w-md">
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
           <h1 className="mb-1 text-2xl font-bold text-gray-900">Вход</h1>
           <p className="mb-6 text-sm text-gray-600">
             Рады видеть вас снова

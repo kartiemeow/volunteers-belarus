@@ -117,7 +117,7 @@ export default async function OpportunitiesPage(
                 </div>
                 <div className="flex items-center gap-1.5">
                   <IconCalendar className="h-4 w-4 text-emerald-600" />
-                  {formatDate(o.date)} · {o.filledSlots}/{o.slots} мест
+                  {formatDate(o.date)}, {o.filledSlots}/{o.slots} мест
                 </div>
               </div>
               <div className="mt-4 border-t border-gray-100 pt-4 text-sm">

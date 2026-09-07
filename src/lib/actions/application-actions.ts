@@ -66,15 +66,31 @@ export async function applyToOpportunity(
     return { error: "Вы уже отправляли отклик на эту заявку" };
   }
 
-  await db.application.create({
-    data: {
-      opportunityId,
-      volunteerId: profile.id,
-      message: message?.trim() || null,
-    },
-  });
+  const noSlots = new Error("no-slots");
+  try {
+    await db.$transaction(async (tx) => {
+      const reserved = await tx.opportunity.updateMany({
+        where: { id: opportunityId, filledSlots: { lt: opportunity.slots } },
+        data: { filledSlots: { increment: 1 } },
+      });
+      if (reserved.count === 0) throw noSlots;
+      await tx.application.create({
+        data: {
+          opportunityId,
+          volunteerId: profile.id,
+          message: message?.trim() || null,
+        },
+      });
+    });
+  } catch (err) {
+    if (err === noSlots) {
+      return { error: "Все места уже заняты" };
+    }
+    return { error: "Не удалось отправить отклик. Попробуйте ещё раз." };
+  }
 
   revalidatePath(`/zayavki/${opportunityId}`);
+  revalidatePath("/zayavki");
   return { success: "Отклик отправлен! Организатор свяжется с вами." };
 }
 
@@ -147,7 +163,7 @@ export async function declineParticipation(formData: FormData) {
   });
   if (!application || !application.needsReconfirmation) return;
 
-  if (application.status === "APPROVED") {
+  if (application.status === "PENDING" || application.status === "APPROVED") {
     await db.opportunity.update({
       where: { id: application.opportunityId },
       data: {
@@ -174,5 +190,6 @@ export async function declineParticipation(formData: FormData) {
   revalidatePath("/volunteer");
   revalidatePath(`/zayavki/${application.opportunityId}`);
   revalidatePath(`/organizer/opportunities/${application.opportunityId}`);
+  revalidatePath("/zayavki");
   revalidatePath("/organizer");
 }
