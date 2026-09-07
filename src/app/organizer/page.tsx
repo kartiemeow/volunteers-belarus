@@ -12,6 +12,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const NOW = Date.now();
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export default async function OrganizerDashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login?next=/organizer");
@@ -31,6 +34,29 @@ export default async function OrganizerDashboardPage() {
       },
     }),
   ]);
+
+  const attendance = await db.opportunity.findMany({
+    where: {
+      organizer: { userId: session.user.id },
+      date: { lte: new Date() },
+      applications: { some: { status: "APPROVED" } },
+    },
+    include: {
+      applications: {
+        where: { status: "APPROVED" },
+        select: { id: true },
+      },
+    },
+    orderBy: { date: "asc" },
+  });
+
+  const totalAttendance = attendance.reduce(
+    (sum, o) => sum + o.applications.length,
+    0
+  );
+  const overdueAttendance = attendance.filter(
+    (o) => o.date.getTime() + 3 * DAY_MS < NOW
+  ).length;
 
   const totalApplications = opportunities.reduce(
     (sum, o) => sum + o._count.applications,
@@ -74,6 +100,30 @@ export default async function OrganizerDashboardPage() {
         </div>
       )}
 
+      {totalAttendance > 0 && (
+        <div
+          className={`mt-6 rounded-xl border px-5 py-4 text-sm ${
+            overdueAttendance > 0
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          <strong>
+            {overdueAttendance > 0
+              ? `Срок отметки явки истёк для ${overdueAttendance} заявки(ок)! `
+              : "Не забудьте отметить явку волонтёров. "}
+          </strong>
+          {totalAttendance} волонтёр(а) участвовали в прошедших заявках — после
+          события явку нужно отметить в течение 3 дней.
+          <Link
+            href="#attendance"
+            className="ml-2 font-semibold underline hover:no-underline"
+          >
+            Отметить явку
+          </Link>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3">
         {[
@@ -87,6 +137,50 @@ export default async function OrganizerDashboardPage() {
           </div>
         ))}
       </div>
+
+      {attendance.length > 0 && (
+        <div id="attendance" className="mt-10">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            Нужно отметить явку
+          </h2>
+          <div className="space-y-3">
+            {attendance.map((o) => {
+              const isOverdue = o.date.getTime() + 3 * DAY_MS < NOW;
+              const deadline = new Date(
+                o.date.getTime() + 3 * 24 * 60 * 60 * 1000
+              );
+              return (
+                <div
+                  key={o.id}
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white px-5 py-4 ${
+                    isOverdue ? "border-red-300" : "border-amber-200"
+                  }`}
+                >
+                  <div>
+                    <div className="font-semibold text-gray-900">{o.title}</div>
+                    <div className="text-sm text-gray-500">
+                      {formatDate(o.date)} · {o.city} · явку нужно отметить{" "}
+                      {o.applications.length} волонтёрам
+                    </div>
+                  </div>
+                  <Link
+                    href={`/organizer/opportunities/${o.id}`}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                      isOverdue
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : "bg-emerald-600 text-white hover:bg-emerald-700"
+                    }`}
+                  >
+                    {isOverdue
+                      ? `Срок истёк ${formatDate(deadline)} — отметить!`
+                      : `До ${formatDate(deadline)}`}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Opportunities */}
       <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">Мои заявки</h2>

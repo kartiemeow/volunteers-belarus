@@ -17,6 +17,7 @@ import {
   NoSlots,
   OrganizerView,
 } from "@/components/ApplyButton";
+import { IconStar } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,17 @@ export default async function OpportunityPage(
   props: PageProps<"/zayavki/[id]">
 ) {
   const { id } = await props.params;
-  const [opportunity, session] = await Promise.all([
+  const [opportunity, session, ratingAgg] = await Promise.all([
     db.opportunity.findUnique({
       where: { id },
       include: { organizer: { include: { user: true } } },
     }),
     auth(),
+    db.rating.aggregate({
+      _avg: { score: true },
+      _count: true,
+      where: { organization: { opportunities: { some: { id } } } },
+    }),
   ]);
 
   if (!opportunity) notFound();
@@ -173,6 +179,15 @@ export default async function OpportunityPage(
                 {opportunity.organizer.verified && (
                   <div className="text-xs font-semibold text-emerald-600">
                     ✓ Проверенная организация
+                  </div>
+                )}
+                {ratingAgg._count > 0 && (
+                  <div className="mt-0.5 flex items-center gap-1 text-sm font-medium text-amber-500">
+                    <IconStar className="h-4 w-4 fill-amber-500 text-amber-500" />
+                    {ratingAgg._avg.score?.toFixed(1) ?? "—"}{" "}
+                    <span className="text-xs font-normal text-gray-400">
+                      ({ratingAgg._count} оценок)
+                    </span>
                   </div>
                 )}
               </div>

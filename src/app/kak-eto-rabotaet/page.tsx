@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { IconHandHeart, IconBuilding } from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "Как это работает",
@@ -70,8 +71,8 @@ export default function KakEtoRabotaetPage() {
         {/* For volunteers */}
         <section className="rounded-2xl border border-emerald-100 bg-white p-8">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-xl">
-              🫶
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <IconHandHeart className="h-6 w-6" />
             </span>
             <h2 className="text-xl font-bold text-gray-900">Для волонтёров</h2>
           </div>
@@ -93,8 +94,8 @@ export default function KakEtoRabotaetPage() {
         {/* For organizations */}
         <section className="rounded-2xl border border-sky-100 bg-white p-8">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-xl">
-              🏢
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+              <IconBuilding className="h-6 w-6" />
             </span>
             <h2 className="text-xl font-bold text-gray-900">Для организаций</h2>
           </div>

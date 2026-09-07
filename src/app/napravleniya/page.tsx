@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { IconPaw, IconOldMan, IconCompass, IconTree } from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "Направления помощи",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 const DIRECTIONS = [
   {
     key: "SHELTER" as const,
-    icon: "🐾",
+    icon: IconPaw,
     title: "Приюты для животных",
     video: "Помощь кошкам и собакам в приютах: выгул, кормление, уборка, уход, фото для поиска новых хозяев.",
     needs: [
@@ -24,7 +25,7 @@ const DIRECTIONS = [
   },
   {
     key: "ELDERLY" as const,
-    icon: "🤝",
+    icon: IconOldMan,
     title: "Помощь пожилым",
     video: "Поддержка одиноких пожилых людей: закупка продуктов, помощь по дому, внимание и общение.",
     needs: [
@@ -38,7 +39,7 @@ const DIRECTIONS = [
   },
   {
     key: "PSO" as const,
-    icon: "🧭",
+    icon: IconCompass,
     title: "Поиск пропавших (ПСО)",
     video: "Участие в поисково-спасательных операциях: работа на местности, в штабе, информационная поддержка.",
     needs: [
@@ -52,7 +53,7 @@ const DIRECTIONS = [
   },
   {
     key: "URBAN" as const,
-    icon: "🌳",
+    icon: IconTree,
     title: "Благоустройство городов",
     video: "Сделаем города Беларуси чище и удобнее: субботники, озеленение, ремонт во дворах и общественных местах.",
     needs: [
@@ -86,7 +87,9 @@ export default function NapravleniyaPage() {
             className="flex flex-col rounded-2xl border border-gray-200 bg-white p-7"
           >
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{d.icon}</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <d.icon className="h-7 w-7" />
+              </span>
               <h2 className="text-xl font-bold text-gray-900">{d.title}</h2>
             </div>
             <p className="mt-3 text-gray-600">{d.video}</p>

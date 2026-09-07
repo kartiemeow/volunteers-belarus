@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ComponentType } from "react";
 import { db } from "@/lib/db";
 import {
   CATEGORY_LABELS,
@@ -7,6 +8,7 @@ import {
   OPPORTUNITY_STATUS_LABELS,
   CATEGORY_ORDER,
 } from "@/lib/constants";
+import { IconPaw, IconOldMan, IconCompass, IconTree, IconMapPin } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +23,11 @@ const DIRECTION_DESCRIPTIONS: Record<string, string> = {
     "Благоустройство городов: субботники, озеленение, уборка дворов и парков, ремонт малых архитектурных форм.",
 };
 
-const DIRECTION_ICONS: Record<string, string> = {
-  SHELTER: "🐾",
-  ELDERLY: "🤝",
-  PSO: "🧭",
-  URBAN: "🌳",
+const DIRECTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  SHELTER: IconPaw,
+  ELDERLY: IconOldMan,
+  PSO: IconCompass,
+  URBAN: IconTree,
 };
 
 export default async function HomePage() {
@@ -124,24 +126,29 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {CATEGORY_ORDER.map((key) => (
-            <Link
-              key={key}
-              href={`/zayavki?category=${key}`}
-              className={`group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-md ${CATEGORY_COLORS[key]}`}
-            >
-              <span className="text-3xl">{DIRECTION_ICONS[key]}</span>
-              <h3 className="mt-4 text-lg font-bold text-gray-900">
-                {CATEGORY_LABELS[key]}
-              </h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">
-                {DIRECTION_DESCRIPTIONS[key]}
-              </p>
-              <span className="mt-4 text-sm font-semibold text-emerald-600 group-hover:underline">
-                Смотреть заявки →
-              </span>
-            </Link>
-          ))}
+          {CATEGORY_ORDER.map((key) => {
+            const Icon = DIRECTION_ICONS[key];
+            return (
+              <Link
+                key={key}
+                href={`/zayavki?category=${key}`}
+                className={`group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-md ${CATEGORY_COLORS[key]}`}
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-4 text-lg font-bold text-gray-900">
+                  {CATEGORY_LABELS[key]}
+                </h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">
+                  {DIRECTION_DESCRIPTIONS[key]}
+                </p>
+                <span className="mt-4 text-sm font-semibold text-emerald-600 group-hover:underline">
+                  Смотреть заявки →
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -205,8 +212,9 @@ export default async function HomePage() {
                     {o.description}
                   </p>
                   <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                    <span>
-                      📍 {o.city}
+                    <span className="flex items-center gap-1 text-gray-500">
+                      <IconMapPin className="h-4 w-4 text-emerald-600" />
+                      {o.city}
                     </span>
                     <span>
                       {o.filledSlots} / {o.slots} мест

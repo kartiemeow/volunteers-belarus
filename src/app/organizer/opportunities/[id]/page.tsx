@@ -14,8 +14,13 @@ import {
   OPPORTUNITY_STATUS_LABELS,
   OPPORTUNITY_STATUS_COLORS,
 } from "@/lib/constants";
+import { getVolunteerReliability } from "@/lib/reliability";
+import { IconMapPin } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
+
+const NOW = Date.now();
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default async function ManageOpportunityPage(
   props: PageProps<"/organizer/opportunities/[id]">
@@ -29,7 +34,17 @@ export default async function ManageOpportunityPage(
     where: { id, organizer: { userId: session.user.id } },
     include: {
       applications: {
-        include: { volunteer: { include: { user: true } } },
+        include: {
+          volunteer: {
+            include: {
+              user: true,
+              applications: {
+                where: { status: { in: ["DONE", "NO_SHOW"] } },
+                select: { status: true, createdAt: true },
+              },
+            },
+          },
+        },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -54,7 +69,10 @@ export default async function ManageOpportunityPage(
             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
               {CATEGORY_LABELS[opportunity.category]}
             </span>
-            <span>📍 {opportunity.city}</span>
+            <span className="flex items-center gap-1">
+              <IconMapPin className="h-4 w-4 text-emerald-600" />
+              {opportunity.city}
+            </span>
             <span>· {formatDate(opportunity.date)}</span>
             <span>
               · мест: {opportunity.filledSlots}/{opportunity.slots}
@@ -108,6 +126,11 @@ export default async function ManageOpportunityPage(
                       <span> · ⏱ {a.volunteer.totalHours} ч помощи</span>
                     )}
                   </div>
+                  {reliabilityOf(a.volunteer.applications).isUnreliable && (
+                    <span className="mt-1.5 inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                      Ненадёжный
+                    </span>
+                  )}
                   {a.volunteer.skills.length > 0 && (
                     <div className="mt-1.5 text-sm text-gray-600">
                       Навыки: {a.volunteer.skills.join(", ")}
@@ -150,20 +173,44 @@ export default async function ManageOpportunityPage(
                   </>
                 )}
 
-                {a.status === "APPROVED" && (
-                  <form action={setApplicationStatus}>
-                    <input type="hidden" name="applicationId" value={a.id} />
-                    <input type="hidden" name="status" value="DONE" />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                    >
-                      Отметить выполненным
-                    </button>
-                  </form>
-                )}
+                {a.status === "APPROVED" &&
+                  (isPast(opportunity.date) ? (
+                    <>
+                      <span className="text-sm text-gray-500">
+                        Отметьте явку волонтёра{overdue(opportunity.date) ? (
+                          <strong className="text-red-600"> — срок истёк!</strong>
+                        ) : (
+                          <strong> — до {deadline(opportunity.date)}</strong>
+                        )}
+                      </span>
+                      <form action={setApplicationStatus}>
+                        <input type="hidden" name="applicationId" value={a.id} />
+                        <input type="hidden" name="status" value="DONE" />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Явился
+                        </button>
+                      </form>
+                      <form action={setApplicationStatus}>
+                        <input type="hidden" name="applicationId" value={a.id} />
+                        <input type="hidden" name="status" value="NO_SHOW" />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                        >
+                          Не явился
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <span className="text-sm text-gray-500">
+                      Явку можно отметить после {formatDate(opportunity.date)}
+                    </span>
+                  ))}
 
-                {a.status !== "PENDING" && (
+                {a.status === "DONE" && (
                   <form action={setApplicationHours} className="flex items-center gap-2">
                     <input
                       type="hidden"
@@ -202,4 +249,27 @@ function formatDate(d: Date) {
     month: "long",
     year: "numeric",
   }).format(d);
+}
+
+function isPast(d: Date) {
+  return d.getTime() <= NOW;
+}
+
+function overdue(d: Date) {
+  return d.getTime() + 3 * DAY_MS < NOW;
+}
+
+function deadline(d: Date) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+  }).format(new Date(d.getTime() + 3 * DAY_MS));
+}
+
+function reliabilityOf(
+  apps: { status: string; createdAt: Date }[]
+) {
+  return getVolunteerReliability(
+    apps.map((a) => ({ status: a.status as "DONE" | "NO_SHOW", createdAt: a.createdAt }))
+  );
 }

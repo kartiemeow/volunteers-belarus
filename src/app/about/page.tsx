@@ -1,5 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import {
+  IconHandshake,
+  IconShield,
+  IconGlobe,
+  IconClock,
+} from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "О проекте",
@@ -9,22 +15,22 @@ export const metadata: Metadata = {
 
 const VALUES = [
   {
-    icon: "🤝",
+    Icon: IconHandshake,
     title: "Помощь без посредников",
     text: "Организации напрямую размещают заявки, а волонтёры сами выбирают, где и как помогать.",
   },
   {
-    icon: "🛡️",
+    Icon: IconShield,
     title: "Безопасность",
     text: "Организации проходят верификацию, все отклики прозрачны и видны в личных кабинетах.",
   },
   {
-    icon: "🌍",
+    Icon: IconGlobe,
     title: "Вся страна",
     text: "Платформа работает для организаций и волонтёров из любого города и посёлка Беларуси.",
   },
   {
-    icon: "⏱",
+    Icon: IconClock,
     title: "Уважение ко времени",
     text: "Чёткие даты, количество волонтёров и задачи — вы знаете, на что идёте соглашаться.",
   },
@@ -67,7 +73,9 @@ export default function AboutPage() {
       <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2">
         {VALUES.map((v) => (
           <div key={v.title} className="rounded-2xl border border-gray-200 bg-white p-6">
-            <div className="text-2xl">{v.icon}</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <v.Icon className="h-6 w-6" />
+          </div>
             <div className="mt-3 font-bold text-gray-900">{v.title}</div>
             <p className="mt-1 text-sm text-gray-600">{v.text}</p>
           </div>

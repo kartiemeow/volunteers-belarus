@@ -1,4 +1,10 @@
 import type { Metadata } from "next";
+import {
+  IconMail,
+  IconSend,
+  IconSmartphone,
+  IconBuilding,
+} from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "Контакты",
@@ -8,25 +14,25 @@ export const metadata: Metadata = {
 
 const CHANNELS = [
   {
-    icon: "📧",
+    Icon: IconMail,
     title: "Электронная почта",
     value: "hello@volunteers-belarus.by",
     note: "Общие вопросы, сотрудничество",
   },
   {
-    icon: "💬",
+    Icon: IconSend,
     title: "Telegram",
     value: "@volunteers_belarus",
     note: "Быстрые ответы, новости направления",
   },
   {
-    icon: "📱",
+    Icon: IconSmartphone,
     title: "Instagram",
     value: "@volunteers_belarus",
     note: "Истории волонтёров и отчёты о акциях",
   },
   {
-    icon: "🏢",
+    Icon: IconBuilding,
     title: "Для организаций",
     value: "org@volunteers-belarus.by",
     note: "Подключение приютов, отрядов и сообществ",
@@ -68,7 +74,9 @@ export default function KontaktyPage() {
             key={c.title}
             className="rounded-2xl border border-gray-200 bg-white p-6"
           >
-            <div className="text-2xl">{c.icon}</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <c.Icon className="h-6 w-6" />
+          </div>
             <div className="mt-3 font-bold text-gray-900">{c.title}</div>
             <div className="mt-1 text-lg font-semibold text-emerald-600">
               {c.value}

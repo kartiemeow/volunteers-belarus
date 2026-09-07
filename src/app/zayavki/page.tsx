@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { OpportunityFilterBar } from "@/components/OpportunityFilterBar";
+import { IconMapPin, IconCalendar } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -110,16 +111,24 @@ export default async function OpportunitiesPage(
                 {o.description}
               </p>
               <div className="mt-5 space-y-1.5 text-sm text-gray-500">
-                <div>📍 {o.city}</div>
-                <div>
-                  🗓 {formatDate(o.date)} · {o.filledSlots}/{o.slots} мест
+                <div className="flex items-center gap-1.5">
+                  <IconMapPin className="h-4 w-4 text-emerald-600" />
+                  {o.city}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <IconCalendar className="h-4 w-4 text-emerald-600" />
+                  {formatDate(o.date)} · {o.filledSlots}/{o.slots} мест
                 </div>
               </div>
               <div className="mt-4 border-t border-gray-100 pt-4 text-sm">
                 <span className="font-medium text-gray-800">{o.organizer.user.name}</span>
-                {o.organizer.verified && (
+                {o.organizer.verified ? (
                   <span className="ml-1.5 text-xs font-semibold text-emerald-600" title="Верифицированная организация">
                     ✓ проверено
+                  </span>
+                ) : (
+                  <span className="ml-1.5 text-xs font-semibold text-yellow-700" title="Профиль ещё не подтверждён администратором">
+                    ожидает проверки
                   </span>
                 )}
               </div>

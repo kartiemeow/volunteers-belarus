@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import type { Session } from "next-auth";
+import NotificationBell, {
+  type BellNotification,
+} from "@/components/NotificationBell";
 
 const NAV_LINKS = [
   { href: "/", label: "Главная" },
@@ -20,7 +23,13 @@ const ROLE_HOME: Record<string, string> = {
   ADMIN: "/admin",
 };
 
-export default function Header({ session }: { session: Session | null }) {
+export default function Header({
+  session,
+  notifications = [],
+}: {
+  session: Session | null;
+  notifications?: BellNotification[];
+}) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -66,7 +75,9 @@ export default function Header({ session }: { session: Session | null }) {
 
         <div className="hidden items-center gap-3 md:flex">
           {user ? (
-            <div className="relative">
+            <>
+              <NotificationBell notifications={notifications} />
+              <div className="relative">
               <button
                 onClick={() => setProfileOpen((v) => !v)}
                 onBlur={() => setTimeout(() => setProfileOpen(false), 150)}
@@ -102,14 +113,15 @@ export default function Header({ session }: { session: Session | null }) {
                 </div>
               )}
             </div>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Войти
-              </Link>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/login"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Войти
+            </Link>
               <Link
                 href="/register"
                 className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"

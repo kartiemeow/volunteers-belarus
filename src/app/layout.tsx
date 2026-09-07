@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,22 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
 
+  const notifications = session?.user
+    ? (await db.notification.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          title: true,
+          body: true,
+          link: true,
+          read: true,
+          createdAt: true,
+        },
+      })).map((n) => ({ ...n, createdAt: n.createdAt.toISOString() }))
+    : [];
+
   return (
     <html
       lang="ru"
@@ -38,7 +55,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-gray-50 font-sans text-gray-900">
-        <Header session={session} />
+        <Header session={session} notifications={notifications} />
         <main className="flex-1">{children}</main>
         <Footer />
       </body>

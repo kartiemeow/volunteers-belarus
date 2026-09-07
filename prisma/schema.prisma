@@ -24,7 +24,15 @@ enum ApplicationStatus {
   PENDING
   APPROVED
   REJECTED
-  DONE
+  DONE // волонтёр явился и выполнил заявку
+  NO_SHOW // волонтёр записался, но не явился
+}
+
+enum NotificationType {
+  APPLICATION_APPROVED // отклик одобрен
+  PARTICIPATION_CONFIRMED // организация подтвердила выполнение
+  RATING_RECEIVED // волонтёр оценил организацию
+  ATTENDANCE_REMINDER // нужно отметить явку
 }
 
 enum OpportunityStatus {
@@ -48,6 +56,7 @@ model User {
   organizationProfile OrganizationProfile?
 
   newsPosts           NewsPost[]      @relation("NewsAuthor")
+  notifications       Notification[]  @relation("UserNotifications")
 }
 
 model VolunteerProfile {
@@ -63,6 +72,7 @@ model VolunteerProfile {
   updatedAt     DateTime @updatedAt
 
   applications Application[]
+  ratings      Rating[]
 }
 
 model OrganizationProfile {
@@ -78,6 +88,7 @@ model OrganizationProfile {
   updatedAt    DateTime @updatedAt
 
   opportunities Opportunity[]
+  ratings      Rating[]
 }
 
 model Opportunity {
@@ -116,6 +127,8 @@ model Application {
   volunteerId    String
   volunteer      VolunteerProfile  @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
 
+  rating         Rating?
+
   @@unique([opportunityId, volunteerId])
 }
 
@@ -131,4 +144,33 @@ model NewsPost {
 
   authorId String
   author   User     @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Rating {
+  id             String               @id @default(cuid())
+  score          Int                  @default(5)
+  comment        String?
+  createdAt      DateTime             @default(now())
+
+  volunteerId    String
+  volunteer      VolunteerProfile     @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   OrganizationProfile  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  applicationId  String               @unique
+  application    Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType @default(APPLICATION_APPROVED)
+  title     String
+  body      String?
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
 }

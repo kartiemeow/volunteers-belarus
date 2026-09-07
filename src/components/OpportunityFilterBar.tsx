@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_ORDER, CATEGORY_SHORT } from "@/lib/constants";
+import { IconSearch } from "@/components/icons";
 
 export function OpportunityFilterBar({
   cities,
@@ -36,8 +37,8 @@ export function OpportunityFilterBar({
         {/* Search */}
         <div className="flex-1">
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              🔍
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600">
+              <IconSearch className="h-4 w-4" />
             </span>
             <input
               value={q}
