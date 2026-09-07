@@ -9,16 +9,18 @@ const db = new PrismaClient({
 
 async function main() {
   const password = await bcrypt.hash("Volunteer-2026!", 10);
+  const verifiedDate = new Date();
 
   console.log("Seeding users...");
 
   const admin = await db.user.upsert({
     where: { email: "admin@volunteers-belarus.by" },
-    update: {},
+    update: { emailVerified: verifiedDate },
     create: {
       name: "Администратор",
       email: "admin@volunteers-belarus.by",
       password,
+      emailVerified: verifiedDate,
       role: "ADMIN",
     },
   });
@@ -68,11 +70,12 @@ async function main() {
     ].map((o) =>
       db.user.upsert({
         where: { email: o.email },
-        update: {},
+        update: { emailVerified: verifiedDate },
         create: {
           name: o.name,
           email: o.email,
           password,
+          emailVerified: verifiedDate,
           role: "ORGANIZER",
           phone: o.phone,
           city: o.city,
@@ -132,11 +135,12 @@ async function main() {
     volunteerSeed.map((v) =>
       db.user.upsert({
         where: { email: v.email },
-        update: {},
+        update: { emailVerified: verifiedDate },
         create: {
           name: v.name,
           email: v.email,
           password,
+          emailVerified: verifiedDate,
           role: "VOLUNTEER",
           city: v.city,
           phone: v.phone,

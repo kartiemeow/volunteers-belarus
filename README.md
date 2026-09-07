@@ -66,7 +66,7 @@
 
 1. Создайте **GitHub-репозиторий** и запушьте проект (`.env` уже в `.gitignore`).
 2. На https://vercel.com нажмите **Add New → Project**, выберите репозиторий.
-3. В настройках проекта укажите переменные окружения (те же, что в `.env`): `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST="true"`.
+3. В настройках проекта укажите переменные окружения (те же, что в `.env`): `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST="true"`, а для проверки почты — SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM_EMAIL`, `MAIL_FROM_NAME` (см. `.env.example`; можно обойтись бесплатным ящиком Yandex/Gmail с паролем приложения, либо альтернативно `BREVO_API_KEY`).
 4. Нажмите **Deploy**. Vercel сам выполнит миграции? **Нет** — их нужно применить вручную (см. ниже).
 
 ### Применение миграций на прод-БД
