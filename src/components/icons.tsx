@@ -23,7 +23,7 @@ export function IconPaw({ className = "h-6 w-6" }: IconProps) {
 
 export function IconOldMan({ className = "h-6 w-6" }: IconProps) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="currentColor" aria-hidden="true">
+    <svg viewBox="4.95 4.5 39 39" className={className} fill="currentColor" aria-hidden="true">
       <path
         fillRule="evenodd"
         clipRule="evenodd"

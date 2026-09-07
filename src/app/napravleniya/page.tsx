@@ -67,12 +67,6 @@ const DIRECTIONS = [
   },
 ];
 
-const DIRECTION_ICON_LAYOUT: Record<string, { box: string; icon: string }> = {
-  ELDERLY: { box: "h-16 w-16", icon: "h-11 w-11" },
-};
-const DEFAULT_ICON_BOX = "h-12 w-12";
-const DEFAULT_ICON_SIZE = "h-7 w-7";
-
 export default function NapravleniyaPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -93,8 +87,8 @@ export default function NapravleniyaPage() {
             className="flex flex-col rounded-2xl border border-gray-200 bg-white p-7"
           >
             <div className="flex items-center gap-3">
-<span className={`flex ${DIRECTION_ICON_LAYOUT[d.key]?.box ?? DEFAULT_ICON_BOX} items-center justify-center rounded-xl bg-emerald-50 text-emerald-600`}>
-                  <d.icon className={DIRECTION_ICON_LAYOUT[d.key]?.icon ?? DEFAULT_ICON_SIZE} />
+<span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <d.icon className="h-7 w-7" />
                 </span>
               <h2 className="text-xl font-bold text-gray-900">{d.title}</h2>
             </div>
