@@ -11,6 +11,10 @@ export function Input({
   min,
   max,
   step,
+  inputMode,
+  pattern,
+  maxLength,
+  autoFocus,
 }: {
   label: string;
   name: string;
@@ -22,6 +26,10 @@ export function Input({
   min?: string | number;
   max?: string | number;
   step?: string | number;
+  inputMode?: "numeric" | "tel" | "email" | "text";
+  pattern?: string;
+  maxLength?: number;
+  autoFocus?: boolean;
 }) {
   return (
     <label className="block">
@@ -38,6 +46,10 @@ export function Input({
         min={min}
         max={max}
         step={step}
+        inputMode={inputMode}
+        pattern={pattern}
+        maxLength={maxLength}
+        autoFocus={autoFocus}
         className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
     </label>

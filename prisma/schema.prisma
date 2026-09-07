@@ -44,21 +44,33 @@ enum OpportunityStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(VOLUNTEER)
-  phone     String?
-  city      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  password     String
+  role         Role      @default(VOLUNTEER)
+  phone        String?
+  city         String?
+  emailVerified DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   volunteerProfile    VolunteerProfile?
   organizationProfile OrganizationProfile?
 
   newsPosts           NewsPost[]      @relation("NewsAuthor")
   notifications       Notification[]  @relation("UserNotifications")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }
 
 model VolunteerProfile {
