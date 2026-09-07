@@ -27,6 +27,12 @@ function senderName(): string {
   return process.env.MAIL_FROM_NAME ?? "Волонтёры Беларуси";
 }
 
+const SMTP_IP_FALLBACKS = ["142.251.127.109"];
+
+function isIpLike(host: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+}
+
 async function sendViaSmtp(to: string, subject: string, html: string): Promise<void> {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
@@ -40,32 +46,31 @@ async function sendViaSmtp(to: string, subject: string, html: string): Promise<v
   const port = Number(process.env.SMTP_PORT ?? 465);
   const secure = String(process.env.SMTP_SECURE ?? "true") !== "false";
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
+  const mail = {
+    from: `"${senderName()}" <${fromEmail}>`,
+    to,
+    subject,
+    html,
+  };
 
-  // На Vercel иногда DNS даёт transient getaddrinfo EBUSY — повторяем на сетевых ошибках.
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  for (const candidate of [host, ...SMTP_IP_FALLBACKS]) {
     try {
-      await transporter.sendMail({
-        from: `"${senderName()}" <${fromEmail}>`,
-        to,
-        subject,
-        html,
+      const transporter = nodemailer.createTransport({
+        host: candidate,
+        port,
+        secure,
+        auth: { user, pass },
+        tls: isIpLike(candidate) ? { servername: host } : undefined,
       });
+      await transporter.sendMail(mail);
       return;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const transient = /getaddrinfo|EBUSY|ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|hang[\s-]*up/i.test(msg);
-      if (!transient || attempt === maxAttempts) throw err;
-      console.error(`[email] Транзиентная ошибка отправки, попытка ${attempt}/${maxAttempts}, повтор: ${msg}`);
-      await new Promise((r) => setTimeout(r, attempt * 750));
+      if (/Invalid login|Username and Password|5\.7\.8|5\.3\.4|Application-specific/i.test(msg)) throw err;
+      console.error(`[email] Не удалось через ${candidate}: ${msg}`);
     }
   }
+  throw new Error("EMAIL_SEND_FAILED");
 }
 
 async function sendViaBrevo(to: string, subject: string, html: string): Promise<void> {
