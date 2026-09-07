@@ -72,14 +72,17 @@ export function PhoneInput({
   defaultValue?: string;
 }) {
   const format = (raw: string): string => {
-    const digits = raw.replace(/\D/g, "").slice(0, 12);
+    let digits = raw.replace(/\D/g, "").slice(0, 12);
     if (!digits) return "";
+    if (digits.startsWith("80")) {
+      digits = "375" + digits.slice(2);
+    } else if (digits.startsWith("0")) {
+      digits = "375" + digits.slice(1);
+    }
     let out = digits.slice(0, 3);
     if (digits.length > 3) out += " " + digits.slice(3, 5);
-    if (digits.length > 5) out += " " + digits.slice(5, 8);
-    if (digits.length > 8) out += " " + digits.slice(8, 10);
-    if (digits.length > 10) out += " " + digits.slice(10, 12);
-    return out;
+    if (digits.length > 5) out += " " + digits.slice(5);
+    return "+" + out;
   };
 
   return (
@@ -97,7 +100,7 @@ export function PhoneInput({
         onInput={(e) => {
           e.currentTarget.value = format(e.currentTarget.value);
         }}
-        placeholder="375 44 559 04 57"
+        placeholder="+375 29 1234567"
         className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
     </label>
