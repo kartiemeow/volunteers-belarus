@@ -72,13 +72,13 @@ export function PhoneInput({
   defaultValue?: string;
 }) {
   const format = (raw: string): string => {
-    const digits = raw.replace(/\D/g, "").replace(/^8/, "7").slice(0, 12);
+    const digits = raw.replace(/\D/g, "").slice(0, 12);
     if (!digits) return "";
-    let out = "+" + digits.slice(0, 1);
-    if (digits.length > 1) out += " (" + digits.slice(1, 4);
-    if (digits.length > 4) out += ") " + digits.slice(4, 7);
-    if (digits.length > 7) out += "-" + digits.slice(7, 9);
-    if (digits.length > 9) out += "-" + digits.slice(9, 11);
+    let out = digits.slice(0, 3);
+    if (digits.length > 3) out += " " + digits.slice(3, 5);
+    if (digits.length > 5) out += " " + digits.slice(5, 8);
+    if (digits.length > 8) out += " " + digits.slice(8, 10);
+    if (digits.length > 10) out += " " + digits.slice(10, 12);
     return out;
   };
 
@@ -97,7 +97,7 @@ export function PhoneInput({
         onInput={(e) => {
           e.currentTarget.value = format(e.currentTarget.value);
         }}
-        placeholder="+375 (29) 123-45-67"
+        placeholder="375 44 559 04 57"
         className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
     </label>
