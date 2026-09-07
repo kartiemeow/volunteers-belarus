@@ -47,12 +47,25 @@ async function sendViaSmtp(to: string, subject: string, html: string): Promise<v
     auth: { user, pass },
   });
 
-  await transporter.sendMail({
-    from: `"${senderName()}" <${fromEmail}>`,
-    to,
-    subject,
-    html,
-  });
+  // На Vercel иногда DNS даёт transient getaddrinfo EBUSY — повторяем на сетевых ошибках.
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await transporter.sendMail({
+        from: `"${senderName()}" <${fromEmail}>`,
+        to,
+        subject,
+        html,
+      });
+      return;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const transient = /getaddrinfo|EBUSY|ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|hang[\s-]*up/i.test(msg);
+      if (!transient || attempt === maxAttempts) throw err;
+      console.error(`[email] Транзиентная ошибка отправки, попытка ${attempt}/${maxAttempts}, повтор: ${msg}`);
+      await new Promise((r) => setTimeout(r, attempt * 750));
+    }
+  }
 }
 
 async function sendViaBrevo(to: string, subject: string, html: string): Promise<void> {
