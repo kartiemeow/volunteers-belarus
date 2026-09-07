@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useActionState } from "react";
+import { useRouter } from "next/navigation";
 import { applyToOpportunity } from "@/lib/actions/application-actions";
 import { Textarea, FormMessage } from "@/components/ui";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
@@ -16,9 +17,15 @@ export function ApplyButton({
     applyToOpportunity,
     undefined
   );
+  const router = useRouter();
   const [closed, setClosed] = useState(false);
   const success = state?.success;
   const showPopup = success && !closed;
+
+  const closePopup = () => {
+    setClosed(true);
+    router.refresh();
+  };
 
   return (
     <>
@@ -42,7 +49,7 @@ export function ApplyButton({
         </button>
       </form>
       {showPopup && (
-        <ConfettiBurst message={success} onClose={() => setClosed(true)} />
+        <ConfettiBurst message={success} onClose={closePopup} />
       )}
     </>
   );

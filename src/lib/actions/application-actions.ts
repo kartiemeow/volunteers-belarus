@@ -89,8 +89,6 @@ export async function applyToOpportunity(
     return { error: "Не удалось отправить отклик. Попробуйте ещё раз." };
   }
 
-  revalidatePath(`/zayavki/${opportunityId}`);
-  revalidatePath("/zayavki");
   return { success: "Отклик отправлен! Организатор свяжется с вами." };
 }
 

@@ -71,7 +71,7 @@ export function VolunteerProfileForm({
       />
 
       <Textarea
-        label="Навыки (через запятую)"
+        label="Навыки"
         name="skills"
         placeholder="Например: вождение, фото, первая помощь, англ. язык"
         defaultValue={skills.join(", ")}
