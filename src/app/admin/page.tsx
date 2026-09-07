@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { verifyOrganization, setOpportunityStatus } from "@/lib/actions/admin-actions";
+import {
+  verifyOrganization,
+  setOpportunityStatus,
+  deleteUser,
+  deleteOrganization,
+} from "@/lib/actions/admin-actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { CATEGORY_SHORT, OPPORTUNITY_STATUS_LABELS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +19,7 @@ export default async function AdminPage() {
   if (!session?.user) redirect("/login?next=/admin");
   if (session.user.role !== "ADMIN") redirect("/");
 
-  const [userCount, orgCount, volCount, oppCount, appCount, organizations, opportunities] =
+  const [userCount, orgCount, volCount, oppCount, appCount, organizations, opportunities, users] =
     await Promise.all([
       db.user.count(),
       db.organizationProfile.count(),
@@ -28,6 +34,10 @@ export default async function AdminPage() {
         include: { organizer: true },
         orderBy: { createdAt: "desc" },
         take: 20,
+      }),
+      db.user.findMany({
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
       }),
     ]);
 
@@ -114,21 +124,94 @@ export default async function AdminPage() {
                     </span>
                   )}
                 </td>
+                <td className="px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <form action={verifyOrganization}>
+                      <input type="hidden" name="profileId" value={org.id} />
+                      <input
+                        type="hidden"
+                        name="verified"
+                        value={org.verified ? "false" : "true"}
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        {org.verified ? "Снять верификацию" : "Подтвердить"}
+                      </button>
+                    </form>
+                    <form action={deleteOrganization}>
+                      <input type="hidden" name="orgId" value={org.id} />
+                      <ConfirmButton
+                        confirmText={`Удалить организацию «${org.orgName}» вместе со всеми её заявками?`}
+                        className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                      >
+                        Удалить
+                      </ConfirmButton>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Users */}
+      <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">
+        Пользователи
+      </h2>
+      <div className="overflow-hidden rounded-2xl border border-gray-200">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50">
+            <tr className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-5 py-3">Пользователь</th>
+              <th className="px-5 py-3">Роль</th>
+              <th className="px-5 py-3">Зарегистрирован</th>
+              <th className="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {users.map((u) => (
+              <tr key={u.id} className="hover:bg-gray-50">
+                <td className="px-5 py-4">
+                  <div className="font-semibold text-gray-900">{u.name}</div>
+                  <div className="text-sm text-gray-500">{u.email}</div>
+                </td>
+                <td className="px-5 py-4">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      u.role === "ADMIN"
+                        ? "bg-purple-100 text-purple-800"
+                        : u.role === "ORGANIZER"
+                          ? "bg-sky-100 text-sky-800"
+                          : "bg-emerald-100 text-emerald-800"
+                    }`}
+                  >
+                    {u.role === "ADMIN"
+                      ? "Администратор"
+                      : u.role === "ORGANIZER"
+                        ? "Организация"
+                        : "Волонтёр"}
+                  </span>
+                </td>
+                <td className="px-5 py-4 text-sm text-gray-500">
+                  {u.createdAt.toLocaleDateString("ru-RU")}
+                </td>
                 <td className="px-5 py-4 text-right">
-                  <form action={verifyOrganization}>
-                    <input type="hidden" name="profileId" value={org.id} />
-                    <input
-                      type="hidden"
-                      name="verified"
-                      value={org.verified ? "false" : "true"}
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      {org.verified ? "Снять верификацию" : "Подтвердить"}
-                    </button>
-                  </form>
+                  {u.role === "ADMIN" ? (
+                    <span className="text-xs text-gray-400">Нельзя удалить</span>
+                  ) : (
+                    <form action={deleteUser}>
+                      <input type="hidden" name="userId" value={u.id} />
+                      <ConfirmButton
+                        confirmText={`Удалить аккаунт пользователя «${u.name}» (${u.email})?`}
+                        className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                      >
+                        Удалить аккаунт
+                      </ConfirmButton>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

@@ -38,3 +38,38 @@ export async function setOpportunityStatus(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
+
+export async function deleteUser(formData: FormData) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") return;
+
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId || userId === session.user.id) return;
+
+  const target = await db.user.findUnique({ where: { id: userId } });
+  if (!target || target.role === "ADMIN") return;
+
+  await db.user.delete({ where: { id: userId } });
+
+  revalidatePath("/admin");
+  revalidatePath("/zayavki");
+}
+
+export async function deleteOrganization(formData: FormData) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") return;
+
+  const orgId = String(formData.get("orgId") ?? "");
+  if (!orgId) return;
+
+  const org = await db.organizationProfile.findUnique({
+    where: { id: orgId },
+    include: { user: true },
+  });
+  if (!org || org.user.role === "ADMIN") return;
+
+  await db.user.delete({ where: { id: org.userId } });
+
+  revalidatePath("/admin");
+  revalidatePath("/zayavki");
+}

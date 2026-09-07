@@ -33,6 +33,8 @@ enum NotificationType {
   PARTICIPATION_CONFIRMED // организация подтвердила выполнение
   RATING_RECEIVED // волонтёр оценил организацию
   ATTENDANCE_REMINDER // нужно отметить явку
+  DATE_CHANGED // организация перенесла дату события
+  PARTICIPATION_DECLINED // волонтёр отказался после переноса даты
 }
 
 enum OpportunityStatus {
@@ -114,12 +116,13 @@ model Opportunity {
 }
 
 model Application {
-  id             String            @id @default(cuid())
-  status         ApplicationStatus @default(PENDING)
-  message        String?
-  hoursLogged    Int               @default(0)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                 String            @id @default(cuid())
+  status             ApplicationStatus @default(PENDING)
+  message            String?
+  hoursLogged        Int               @default(0)
+  needsReconfirmation Boolean          @default(false) // организация перенесла дату — нужно повторное подтверждение
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   opportunityId  String
   opportunity    Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)

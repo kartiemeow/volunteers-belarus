@@ -15,6 +15,7 @@ import {
   OPPORTUNITY_STATUS_COLORS,
 } from "@/lib/constants";
 import { getVolunteerReliability } from "@/lib/reliability";
+import { RescheduleOpportunityForm } from "@/components/RescheduleOpportunityForm";
 import { IconMapPin } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +94,21 @@ export default async function ManageOpportunityPage(
       </div>
 
       <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">
+        Перенос события
+      </h2>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+        <p className="mb-4 text-sm text-gray-500">
+          Если дата или время события изменились — обновите их здесь.
+          Откликнувшиеся волонтёры получат уведомление и смогут подтвердить
+          участие заново или отказаться.
+        </p>
+        <RescheduleOpportunityForm
+          opportunityId={opportunity.id}
+          currentDate={toDatetimeLocal(opportunity.date)}
+        />
+      </div>
+
+      <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">
         Отклики волонтёров
       </h2>
 
@@ -145,6 +161,12 @@ export default async function ManageOpportunityPage(
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_COLORS[a.status]}`}>
                   {STATUS_LABELS[a.status]}
                 </span>
+                {a.needsReconfirmation &&
+                  (a.status === "PENDING" || a.status === "APPROVED") && (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                      Ожидает подтверждения
+                    </span>
+                  )}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
@@ -249,6 +271,13 @@ function formatDate(d: Date) {
     month: "long",
     year: "numeric",
   }).format(d);
+}
+
+function toDatetimeLocal(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 }
 
 function isPast(d: Date) {

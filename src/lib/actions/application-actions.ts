@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { notifyUser } from "@/lib/notifications";
 
 export type ApplicationState = { error?: string; success?: string } | undefined;
 
@@ -98,5 +99,80 @@ export async function toggleOpportunityStatus(formData: FormData) {
   });
 
   revalidatePath(`/zayavki/${id}`);
+  revalidatePath("/organizer");
+}
+
+export async function confirmParticipation(formData: FormData) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "VOLUNTEER") return;
+
+  const applicationId = String(formData.get("applicationId") ?? "");
+  const volunteer = await db.volunteerProfile.findUnique({
+    where: { userId: session.user.id },
+  });
+  if (!volunteer) return;
+
+  const application = await db.application.findFirst({
+    where: { id: applicationId, volunteerId: volunteer.id },
+  });
+  if (!application || !application.needsReconfirmation) return;
+  if (application.status !== "PENDING" && application.status !== "APPROVED") return;
+
+  await db.application.update({
+    where: { id: applicationId },
+    data: { needsReconfirmation: false },
+  });
+
+  revalidatePath("/volunteer");
+  revalidatePath(`/zayavki/${application.opportunityId}`);
+  revalidatePath(`/organizer/opportunities/${application.opportunityId}`);
+}
+
+export async function declineParticipation(formData: FormData) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "VOLUNTEER") return;
+
+  const applicationId = String(formData.get("applicationId") ?? "");
+  const volunteer = await db.volunteerProfile.findUnique({
+    where: { userId: session.user.id },
+    include: { user: { select: { name: true } } },
+  });
+  if (!volunteer) return;
+
+  const application = await db.application.findFirst({
+    where: { id: applicationId, volunteerId: volunteer.id },
+    include: {
+      opportunity: { include: { organizer: { include: { user: true } } } },
+    },
+  });
+  if (!application || !application.needsReconfirmation) return;
+
+  if (application.status === "APPROVED") {
+    await db.opportunity.update({
+      where: { id: application.opportunityId },
+      data: {
+        filledSlots: {
+          decrement: application.opportunity.filledSlots > 0 ? 1 : 0,
+        },
+      },
+    });
+  }
+
+  await db.application.update({
+    where: { id: applicationId },
+    data: { status: "REJECTED", needsReconfirmation: false },
+  });
+
+  await notifyUser(
+    application.opportunity.organizer.userId,
+    "PARTICIPATION_DECLINED",
+    "Волонтёр отказался от участия",
+    `${volunteer.user.name} отказался от участия в «${application.opportunity.title}» после переноса даты события.`,
+    `/organizer/opportunities/${application.opportunityId}`
+  );
+
+  revalidatePath("/volunteer");
+  revalidatePath(`/zayavki/${application.opportunityId}`);
+  revalidatePath(`/organizer/opportunities/${application.opportunityId}`);
   revalidatePath("/organizer");
 }

@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import {
+  confirmParticipation,
+  declineParticipation,
+} from "@/lib/actions/application-actions";
 import { getVolunteerReliability } from "@/lib/reliability";
 import { CATEGORY_COLORS, CATEGORY_SHORT, STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
 import { IconAlert, IconMapPin, IconStar } from "@/components/icons";
@@ -224,6 +228,20 @@ export default async function VolunteerDashboardPage({
                   </p>
                 )}
 
+                {a.needsReconfirmation &&
+                  (a.status === "PENDING" || a.status === "APPROVED") && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="text-sm font-semibold text-amber-900">
+                        Дата события изменилась
+                      </p>
+                      <p className="mt-0.5 text-sm text-amber-800">
+                        Организация перенесла событие. Новая дата:{" "}
+                        <strong>{formatDateTime(a.opportunity.date)}</strong>.
+                        Подтвердите участие или откажитесь.
+                      </p>
+                    </div>
+                  )}
+
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
                   {couldRate && (
                     <Link
@@ -240,6 +258,29 @@ export default async function VolunteerDashboardPage({
                       Вы оценили организацию. Спасибо!
                     </span>
                   )}
+                  {a.needsReconfirmation &&
+                    (a.status === "PENDING" || a.status === "APPROVED") && (
+                      <>
+                        <form action={confirmParticipation}>
+                          <input type="hidden" name="applicationId" value={a.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                          >
+                            Подтверждаю участие
+                          </button>
+                        </form>
+                        <form action={declineParticipation}>
+                          <input type="hidden" name="applicationId" value={a.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                          >
+                            Отказаться
+                          </button>
+                        </form>
+                      </>
+                    )}
                 </div>
               </div>
             );
@@ -254,5 +295,15 @@ function formatDate(d: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "short",
+  }).format(d);
+}
+
+function formatDateTime(d: Date) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(d);
 }
