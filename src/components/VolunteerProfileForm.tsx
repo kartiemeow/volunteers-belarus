@@ -20,7 +20,6 @@ const AVAILABILITY_OPTIONS = [
   "выходные утро",
   "выходные день",
   "выходные вечер",
-  "готов выезжать",
 ] as const;
 
 export function VolunteerProfileForm({
