@@ -68,7 +68,8 @@ async function SiteHeader() {
       })).map((n) => ({ ...n, createdAt: n.createdAt.toISOString() }))
     : [];
 
-  return <Header session={session} notifications={notifications} />;
+  const unreadCount = session?.user ? await db.notification.count({ where: { userId: session.user.id, read: false } }) : 0;
+  return <Header session={session} notifications={notifications} unreadCount={unreadCount} />;
 }
 
 function HeaderSkeleton() {

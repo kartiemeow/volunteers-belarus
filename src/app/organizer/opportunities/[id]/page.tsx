@@ -1,3 +1,7 @@
+import { ActionForm } from "@/components/ActionForm";
+import { toggleOpportunityStatus } from "@/lib/actions/application-actions";
+import { toEventInput as toDatetimeLocal } from "@/lib/dates";
+import { formatEventDate as formatDate } from "@/lib/dates";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 
@@ -20,7 +24,6 @@ import { IconMapPin } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-const NOW = Date.now();
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default async function ManageOpportunityPage(
@@ -87,6 +90,15 @@ export default async function ManageOpportunityPage(
           >
             Публичная страница
           </a>
+          {opportunity.status !== "COMPLETED" && (
+            <ActionForm action={toggleOpportunityStatus}>
+              <input type="hidden" name="id" value={opportunity.id} />
+              <input type="hidden" name="status" value={opportunity.status === "OPEN" ? "CLOSED" : "OPEN"} />
+              <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                {opportunity.status === "OPEN" ? "Закрыть набор" : "Открыть набор"}
+              </button>
+            </ActionForm>
+          )}
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
             {OPPORTUNITY_STATUS_LABELS[opportunity.status]}
           </span>
@@ -172,7 +184,7 @@ export default async function ManageOpportunityPage(
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
                 {a.status === "PENDING" && (
                   <>
-                    <form action={setApplicationStatus}>
+                    <ActionForm action={setApplicationStatus}>
                       <input type="hidden" name="applicationId" value={a.id} />
                       <input type="hidden" name="status" value="APPROVED" />
                       <button
@@ -181,8 +193,8 @@ export default async function ManageOpportunityPage(
                       >
                         Одобрить
                       </button>
-                    </form>
-                    <form action={setApplicationStatus}>
+                    </ActionForm>
+                    <ActionForm action={setApplicationStatus}>
                       <input type="hidden" name="applicationId" value={a.id} />
                       <input type="hidden" name="status" value="REJECTED" />
                       <button
@@ -191,11 +203,11 @@ export default async function ManageOpportunityPage(
                       >
                         Отклонить
                       </button>
-                    </form>
+                    </ActionForm>
                   </>
                 )}
 
-                {a.status === "APPROVED" &&
+                {a.status === "APPROVED" && !a.needsReconfirmation &&
                   (isPast(opportunity.date) ? (
                     <>
                       <span className="text-sm text-gray-500">
@@ -205,7 +217,7 @@ export default async function ManageOpportunityPage(
                           <strong>: до {deadline(opportunity.date)}</strong>
                         )}
                       </span>
-                      <form action={setApplicationStatus}>
+                      <ActionForm action={setApplicationStatus}>
                         <input type="hidden" name="applicationId" value={a.id} />
                         <input type="hidden" name="status" value="DONE" />
                         <button
@@ -214,8 +226,8 @@ export default async function ManageOpportunityPage(
                         >
                           Явился
                         </button>
-                      </form>
-                      <form action={setApplicationStatus}>
+                      </ActionForm>
+                      <ActionForm action={setApplicationStatus}>
                         <input type="hidden" name="applicationId" value={a.id} />
                         <input type="hidden" name="status" value="NO_SHOW" />
                         <button
@@ -224,7 +236,7 @@ export default async function ManageOpportunityPage(
                         >
                           Не явился
                         </button>
-                      </form>
+                      </ActionForm>
                     </>
                   ) : (
                     <span className="text-sm text-gray-500">
@@ -233,7 +245,7 @@ export default async function ManageOpportunityPage(
                   ))}
 
                 {a.status === "DONE" && (
-                  <form action={setApplicationHours} className="flex items-center gap-2">
+                  <ActionForm action={setApplicationHours} className="flex items-center gap-2">
                     <input
                       type="hidden"
                       name="applicationId"
@@ -254,7 +266,7 @@ export default async function ManageOpportunityPage(
                     >
                       Сохранить
                     </button>
-                  </form>
+                  </ActionForm>
                 )}
               </div>
             </div>
@@ -265,27 +277,12 @@ export default async function ManageOpportunityPage(
   );
 }
 
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
-}
-
-function toDatetimeLocal(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
-
 function isPast(d: Date) {
-  return d.getTime() <= NOW;
+  return d.getTime() <= Date.now();
 }
 
 function overdue(d: Date) {
-  return d.getTime() + 3 * DAY_MS < NOW;
+  return d.getTime() + 3 * DAY_MS < Date.now();
 }
 
 function deadline(d: Date) {

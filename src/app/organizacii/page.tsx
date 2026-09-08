@@ -156,7 +156,7 @@ export default async function OrganizationsPage() {
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <Link
-                  href="/zayavki"
+                  href={`/zayavki?organizer=${encodeURIComponent(org.id)}`}
                   className="text-sm font-medium text-emerald-600 hover:underline"
                 >
                   Смотреть заявки

@@ -1,3 +1,5 @@
+import { OrganizerContact } from "@/components/OrganizerContact";
+import { formatEventDate as formatDate } from "@/lib/dates";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -52,30 +54,22 @@ export default async function OpportunityPage(
   const user = session?.user;
   const isOwner = user?.role === "ORGANIZER" && opportunity.organizer.userId === user.id;
 
+  const existingApplication = user?.role === "VOLUNTEER" ? await db.application.findFirst({
+    where: { opportunityId: id, volunteer: { userId: user.id } },
+  }) : null;
   let actionArea: React.ReactNode = null;
   if (isOwner) {
     actionArea = <OrganizerView />;
-  } else if (opportunity.status !== "OPEN" || opportunity.filledSlots >= opportunity.slots) {
+  } else if (existingApplication) {
+    actionArea = <AlreadyApplied />;
+  } else if (opportunity.status !== "OPEN" || opportunity.date <= new Date() || opportunity.filledSlots >= opportunity.slots) {
     actionArea = <NoSlots />;
   } else if (!user) {
-    actionArea = <NeedLogin />;
+    actionArea = <NeedLogin opportunityId={id} />;
   } else if (user.role !== "VOLUNTEER") {
     actionArea = <OrganizerView />;
   } else {
-    const profile = await db.volunteerProfile.findUnique({
-      where: { userId: user.id },
-    });
-    const existing = profile
-      ? await db.application.findUnique({
-          where: {
-            opportunityId_volunteerId: {
-              opportunityId: opportunity.id,
-              volunteerId: profile.id,
-            },
-          },
-        })
-      : null;
-    actionArea = existing ? <AlreadyApplied /> : <ApplyButton opportunityId={opportunity.id} />;
+    actionArea = <ApplyButton opportunityId={opportunity.id} />;
   }
 
   return (
@@ -199,17 +193,12 @@ export default async function OpportunityPage(
               Хотите помочь?
             </h2>
             {actionArea}
+            {(isOwner || (existingApplication && ["APPROVED", "DONE", "NO_SHOW"].includes(existingApplication.status))) && (
+              <OrganizerContact contact={opportunity.contactInfo} address={opportunity.address} />
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
 }

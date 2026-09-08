@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
+import { deleteAccount } from "@/lib/delete-account";
 import { auth } from "@/lib/auth";
 
 export async function verifyOrganization(formData: FormData) {
@@ -17,6 +18,7 @@ export async function verifyOrganization(formData: FormData) {
     data: { verified },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
@@ -35,6 +37,7 @@ export async function setOpportunityStatus(formData: FormData) {
     data: { status: status as "OPEN" | "CLOSED" | "COMPLETED" },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
@@ -49,8 +52,9 @@ export async function deleteUser(formData: FormData) {
   const target = await db.user.findUnique({ where: { id: userId } });
   if (!target || target.role === "ADMIN") return;
 
-  await db.user.delete({ where: { id: userId } });
+  await deleteAccount(userId);
 
+  revalidatePath("/", "layout");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
@@ -68,8 +72,9 @@ export async function deleteOrganization(formData: FormData) {
   });
   if (!org || org.user.role === "ADMIN") return;
 
-  await db.user.delete({ where: { id: org.userId } });
+  await deleteAccount(org.userId);
 
+  revalidatePath("/", "layout");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }

@@ -10,11 +10,15 @@ export function OpportunityFilterBar({
   activeCategory = "",
   activeCity = "",
   query = "",
+  organizer = "",
+  archive = false,
 }: {
   cities: string[];
   activeCategory?: string;
   activeCity?: string;
   query?: string;
+  organizer?: string;
+  archive?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -22,6 +26,8 @@ export function OpportunityFilterBar({
 
   function apply(params: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
+    if (organizer) sp.set("organizer", organizer);
+    if (archive) sp.set("archive", "1");
     const category = params.category ?? activeCategory;
     const city = params.city ?? activeCity;
     const sQuery = params.q ?? q;
@@ -46,6 +52,7 @@ export function OpportunityFilterBar({
               onKeyDown={(e) => {
                 if (e.key === "Enter") apply({});
               }}
+              aria-label="Поиск заявок"
               placeholder="Поиск по названию или описанию..."
               className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
@@ -81,6 +88,7 @@ export function OpportunityFilterBar({
 
         {/* City */}
         <select
+          aria-label="Город"
           value={activeCity}
           onChange={(e) => apply({ city: e.target.value })}
           className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"

@@ -1,3 +1,4 @@
+import { formatEventDate as formatDate } from "@/lib/dates";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,7 +13,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const NOW = Date.now();
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default async function OrganizerDashboardPage() {
@@ -20,6 +20,7 @@ export default async function OrganizerDashboardPage() {
   if (!session?.user) redirect("/login?next=/organizer");
   if (session.user.role !== "ORGANIZER") redirect("/volunteer");
 
+  const now = new Date().getTime();
   const [orgProfile, opportunities] = await Promise.all([
     db.organizationProfile.findUnique({ where: { userId: session.user.id } }),
     db.opportunity.findMany({
@@ -55,7 +56,7 @@ export default async function OrganizerDashboardPage() {
     0
   );
   const overdueAttendance = attendance.filter(
-    (o) => o.date.getTime() + 3 * DAY_MS < NOW
+    (o) => o.date.getTime() + 3 * DAY_MS < now
   ).length;
 
   const totalApplications = opportunities.reduce(
@@ -145,7 +146,7 @@ export default async function OrganizerDashboardPage() {
           </h2>
           <div className="space-y-3">
             {attendance.map((o) => {
-              const isOverdue = o.date.getTime() + 3 * DAY_MS < NOW;
+              const isOverdue = o.date.getTime() + 3 * DAY_MS < now;
               const deadline = new Date(
                 o.date.getTime() + 3 * 24 * 60 * 60 * 1000
               );
@@ -299,12 +300,4 @@ export default async function OrganizerDashboardPage() {
       )}
     </div>
   );
-}
-
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
 }

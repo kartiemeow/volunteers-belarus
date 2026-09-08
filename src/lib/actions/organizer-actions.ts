@@ -1,221 +1,73 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
-
-import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { notifyUser } from "@/lib/notifications";
-import type { ApplicationStatus } from "@/generated/prisma/client";
+import { transaction } from "@/lib/transaction";
+import { changeParticipation, recomputeVolunteerHours, ACTIVE_STATUSES } from "@/lib/participation";
+import { ActionError, actionError, type ActionResult } from "@/lib/action-result";
+import { parseEventDate, formatEventDate } from "@/lib/dates";
 import type { OpportunityFormState } from "./opportunity-actions";
 
-export async function setApplicationStatus(formData: FormData) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ORGANIZER") return;
-
-  const applicationId = String(formData.get("applicationId") ?? "");
-  const status = String(formData.get("status") ?? "") as ApplicationStatus;
-
-  if (!["PENDING", "APPROVED", "REJECTED", "DONE", "NO_SHOW"].includes(status))
-    return;
-
-  const application = await db.application.findFirst({
-    where: {
-      id: applicationId,
-      opportunity: { organizer: { userId: session.user.id } },
-    },
-    include: {
-      opportunity: { include: { organizer: { include: { user: true } } } },
-    },
-  });
-  if (!application) return;
-
-  const opportunity = application.opportunity;
-
-  const isAttendance = status === "DONE" || status === "NO_SHOW";
-  if (isAttendance && application.status !== "APPROVED") return;
-  if (isAttendance && opportunity.date.getTime() > Date.now()) return;
-
-  if (status === "APPROVED" && application.status !== "APPROVED") {
-    if (opportunity.filledSlots >= opportunity.slots) return;
-  }
-
-  const heldBefore =
-    application.status === "PENDING" || application.status === "APPROVED";
-  const holdsAfter = status === "PENDING" || status === "APPROVED";
-  if (heldBefore && !holdsAfter) {
-    await db.opportunity.update({
-      where: { id: opportunity.id },
-      data: { filledSlots: { decrement: 1 } },
-    });
-  }
-
-  const changedFrom = application.status;
-  await db.application.update({
-    where: { id: applicationId },
-    data: { status },
-  });
-
-  if (
-    (status === "DONE" && changedFrom === "APPROVED") ||
-    (changedFrom === "DONE" && application.status !== "DONE")
-  ) {
-    await recomputeVolunteerHours(application.volunteerId);
-  }
-
-  if (status === "APPROVED" && changedFrom !== "APPROVED") {
-    const volunteer = await db.volunteerProfile.findUnique({
-      where: { id: application.volunteerId },
-      include: { user: true },
-    });
-    if (volunteer) {
-      await notifyUser(
-        volunteer.userId,
-        "APPLICATION_APPROVED",
-        "Ваш отклик одобрен",
-        `Организация «${opportunity.organizer.orgName}» одобрила ваш отклик на заявку «${opportunity.title}».`,
-        `/zayavki/${opportunity.id}`
-      );
-    }
-  }
-
-  if (status === "DONE" && changedFrom !== "DONE") {
-    const volunteer = await db.volunteerProfile.findUnique({
-      where: { id: application.volunteerId },
-      include: { user: true },
-    });
-    if (volunteer) {
-      await notifyUser(
-        volunteer.userId,
-        "PARTICIPATION_CONFIRMED",
-        "Выполнение подтверждено. Оцените организацию!",
-        `Организация «${opportunity.organizer.orgName}» подтвердила, что вы выполнили заявку «${opportunity.title}». Будем рады, если вы оцените работу организации.`,
-        `/ocenit/${applicationId}`
-      );
-    }
-  }
-
-  revalidatePath(`/organizer/opportunities/${opportunity.id}`);
-  revalidatePath("/organizer");
-  revalidatePath("/volunteer");
-  revalidatePath("/zayavki");
+function refresh(id: string) {
+  for (const path of ["/organizer", "/volunteer", "/zayavki", `/zayavki/${id}`, `/organizer/opportunities/${id}`]) revalidatePath(path);
+  revalidatePath("/", "layout");
 }
 
-export async function setApplicationHours(formData: FormData) {
+export async function setApplicationStatus(prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ORGANIZER") return;
-
-  const applicationId = String(formData.get("applicationId") ?? "");
-  const hours = Math.max(0, Math.min(24, Number(formData.get("hours") ?? 0)));
-
-  const application = await db.application.findFirst({
-    where: {
-      id: applicationId,
-      opportunity: { organizer: { userId: session.user.id } },
-    },
-    include: { opportunity: true },
-  });
-  if (!application) return;
-
-  await db.application.update({
-    where: { id: applicationId },
-    data: { hoursLogged: hours },
-  });
-
-  await recomputeVolunteerHours(application.volunteerId);
-
-  revalidatePath(`/organizer/opportunities/${application.opportunity.id}`);
-  revalidatePath("/organizer");
-  revalidatePath("/volunteer");
+  if (session?.user.role !== "ORGANIZER") return { error: "Доступно только организациям" };
+  const status = z.enum(["APPROVED", "REJECTED", "DONE", "NO_SHOW"]).safeParse(formData.get("status"));
+  if (!status.success) return { error: "Неизвестный статус" };
+  try {
+    const app = await transaction((tx) => changeParticipation(tx, String(formData.get("applicationId") ?? ""), session.user.id, "ORGANIZER", status.data));
+    refresh(app.opportunityId);
+    return { success: "Статус обновлён" };
+  } catch (error) { return actionError(error); }
 }
 
-async function recomputeVolunteerHours(volunteerId: string) {
-  const agg = await db.application.aggregate({
-    where: { volunteerId, status: "DONE" },
-    _sum: { hoursLogged: true },
-  });
-  await db.volunteerProfile.update({
-    where: { id: volunteerId },
-    data: { totalHours: agg._sum.hoursLogged ?? 0 },
-  });
+export async function setApplicationHours(prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user.role !== "ORGANIZER") return { error: "Доступно только организациям" };
+  const hours = z.coerce.number().int().min(0).max(24).safeParse(formData.get("hours"));
+  if (!hours.success) return { error: "Укажите целое число часов от 0 до 24" };
+  try {
+    const id = await transaction(async (tx) => {
+      const app = await tx.application.findFirst({ where: {
+        id: String(formData.get("applicationId") ?? ""), status: "DONE",
+        opportunity: { organizer: { userId: session.user.id } },
+      } });
+      if (!app) throw new ActionError("Выполненный отклик не найден");
+      await tx.application.update({ where: { id: app.id }, data: { hoursLogged: hours.data } });
+      await recomputeVolunteerHours(tx, app.volunteerId);
+      return app.opportunityId;
+    });
+    refresh(id);
+    return { success: "Часы сохранены" };
+  } catch (error) { return actionError(error); }
 }
 
-export async function rescheduleOpportunity(
-  prevState: OpportunityFormState,
-  formData: FormData
-): Promise<OpportunityFormState> {
+export async function rescheduleOpportunity(prev: OpportunityFormState, formData: FormData): Promise<OpportunityFormState> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ORGANIZER") {
-    return { error: "Доступно только организациям" };
-  }
-
+  if (session?.user.role !== "ORGANIZER") return { error: "Доступно только организациям" };
+  const date = parseEventDate(String(formData.get("date") ?? ""));
+  if (!date || date <= new Date()) return { error: "Укажите будущие дату и время по Минску" };
   const id = String(formData.get("id") ?? "");
-  const dateRaw = String(formData.get("date") ?? "");
-  const newDate = new Date(dateRaw);
-  if (Number.isNaN(newDate.getTime())) {
-    return { error: "Укажите корректную дату и время" };
-  }
-
-  const opportunity = await db.opportunity.findFirst({
-    where: { id, organizer: { userId: session.user.id } },
-  });
-  if (!opportunity) return { error: "Заявка не найдена" };
-
-  if (opportunity.date.getTime() === newDate.getTime()) {
-    return { success: "Дата не изменилась" };
-  }
-
-  if (newDate.getTime() < Date.now() - 24 * 60 * 60 * 1000) {
-    return { error: "Новая дата не может быть в прошлом" };
-  }
-
-  await db.opportunity.update({
-    where: { id },
-    data: { date: newDate },
-  });
-
-  const affectedApplications = await db.application.findMany({
-    where: { opportunityId: id, status: { in: ["PENDING", "APPROVED"] } },
-    include: {
-      volunteer: { include: { user: true } },
-      opportunity: { include: { organizer: true } },
-    },
-  });
-
-  if (affectedApplications.length > 0) {
-    await db.application.updateMany({
-      where: { opportunityId: id, status: { in: ["PENDING", "APPROVED"] } },
-      data: { needsReconfirmation: true },
+  try {
+    const count = await transaction(async (tx) => {
+      const opportunity = await tx.opportunity.findFirst({ where: { id, organizer: { userId: session.user.id } }, include: { organizer: true } });
+      if (!opportunity || opportunity.status === "COMPLETED") throw new ActionError("Заявка не найдена или уже завершена");
+      if (opportunity.date.getTime() === date.getTime()) return 0;
+      const apps = await tx.application.findMany({ where: { opportunityId: id, status: { in: ACTIVE_STATUSES } }, include: { volunteer: true } });
+      await tx.opportunity.update({ where: { id }, data: { date } });
+      await tx.application.updateMany({ where: { opportunityId: id, status: { in: ACTIVE_STATUSES } }, data: { needsReconfirmation: true } });
+      await tx.notification.createMany({ data: apps.map((app) => ({
+        userId: app.volunteer.userId, type: "DATE_CHANGED" as const, title: "Дата события изменена",
+        body: `«${opportunity.title}»: ${formatEventDate(date)}. Подтвердите участие до начала события или откажитесь.`, link: "/volunteer",
+      })) });
+      return apps.length;
     });
-  }
-
-  const newLabel = formatFullDate(newDate);
-  for (const app of affectedApplications) {
-    await notifyUser(
-      app.volunteer.userId,
-      "DATE_CHANGED",
-      "Дата события изменена",
-      `Организация «${app.opportunity.organizer.orgName}» перенесла событие «${app.opportunity.title}». Новая дата: ${newLabel}. Подтвердите участие или откажитесь в личном кабинете.`,
-      "/volunteer"
-    );
-  }
-
-  revalidatePath(`/organizer/opportunities/${id}`);
-  revalidatePath("/organizer");
-  revalidatePath(`/zayavki/${id}`);
-  revalidatePath("/zayavki");
-  revalidatePath("/volunteer");
-
-  return {
-    success: `Дата события изменена. Волонтёры уведомлены (${affectedApplications.length}).`,
-  };
-}
-
-function formatFullDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
+    refresh(id);
+    return { success: `Дата сохранена. Уведомлений: ${count}.` };
+  } catch (error) { return actionError(error); }
 }

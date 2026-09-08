@@ -1,3 +1,4 @@
+import { formatEventDate as formatDate } from "@/lib/dates";
 import Link from "next/link";
 import {
   CATEGORY_COLORS,
@@ -30,7 +31,13 @@ export default async function OpportunitiesPage(
   const city = typeof searchParams.city === "string" ? searchParams.city : "";
   const query = typeof searchParams.q === "string" ? searchParams.q : "";
 
+  const archive = searchParams.archive === "1";
+  const organizer = typeof searchParams.organizer === "string" ? searchParams.organizer : "";
+  const now = new Date();
   const where = {
+    AND: [archive ? { OR: [{ status: { not: "OPEN" as const } }, { date: { lte: now } }] }
+      : { status: "OPEN" as const, date: { gt: now } }],
+    ...(organizer ? { organizerId: organizer } : {}),
     ...(category && CATEGORY_ORDER.includes(category as never)
       ? { category: category as (typeof CATEGORY_ORDER)[number] }
       : {}),
@@ -47,13 +54,11 @@ export default async function OpportunitiesPage(
 
   const opportunities = await db.opportunity.findMany({
     where,
-    orderBy: { createdAt: "desc" },
+    orderBy: archive ? { createdAt: "desc" } : { date: "asc" },
     include: { organizer: { include: { user: true } } },
   });
 
-  const allOpportunities = await db.opportunity.findMany({
-    select: { id: true, title: true, city: true },
-  });
+  const allOpportunities = opportunities;
 
   const cityMap = new Map<string, { id: string; title: string }[]>();
   for (const o of allOpportunities) {
@@ -84,11 +89,19 @@ export default async function OpportunitiesPage(
         </p>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-3 text-sm">
+        <Link href={archive ? "/zayavki" : "/zayavki?archive=1"} className="font-medium text-emerald-700 hover:underline">
+          {archive ? "Актуальные заявки" : "Архив заявок"}
+        </Link>
+        {organizer && <Link href="/zayavki" className="text-gray-500 hover:underline">Все организации</Link>}
+      </div>
       <OpportunityFilterBar
         cities={CITY_SUGGESTIONS}
         activeCategory={category}
         activeCity={city}
         query={query}
+        organizer={organizer}
+        archive={archive}
       />
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:gap-8">
@@ -98,6 +111,8 @@ export default async function OpportunitiesPage(
             activeCity={city}
             activeCategory={category}
             activeQuery={query}
+            organizer={organizer}
+            archive={archive}
             totalCount={allOpportunities.length}
           />
         </div>
@@ -166,13 +181,6 @@ export default async function OpportunitiesPage(
   );
 }
 
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
-}
 
 function pluralize(n: number) {
   const lastDigit = n % 10;

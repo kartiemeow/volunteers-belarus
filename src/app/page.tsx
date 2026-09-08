@@ -33,7 +33,7 @@ const DIRECTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
 export default async function HomePage() {
   const [recentOpportunities, stats] = await Promise.all([
     db.opportunity.findMany({
-      where: { status: "OPEN" },
+      where: { status: "OPEN", date: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
       take: 6,
       include: { organizer: { include: { user: true } } },

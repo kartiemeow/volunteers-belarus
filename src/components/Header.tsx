@@ -28,9 +28,11 @@ const ROLE_HOME: Record<string, string> = {
 export default function Header({
   session,
   notifications = [],
+  unreadCount = 0,
 }: {
   session: Session | null;
   notifications?: BellNotification[];
+  unreadCount?: number;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function Header({
         <div className="hidden items-center gap-3 md:flex">
           {user ? (
             <>
-              <NotificationBell notifications={notifications} />
+              <NotificationBell notifications={notifications} unreadCount={unreadCount} />
               <div className="relative">
               <button
                 onClick={() => setProfileOpen((v) => !v)}
@@ -195,7 +197,7 @@ export default function Header({
                     <span className="text-sm font-medium text-gray-700">
                       Уведомления
                     </span>
-                    <NotificationBell notifications={notifications} />
+                    <NotificationBell notifications={notifications} unreadCount={unreadCount} />
                   </div>
                   <button
                     onClick={() => signOut({ callbackUrl: "/" })}

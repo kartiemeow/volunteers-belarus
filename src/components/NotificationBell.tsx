@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatEventDate } from "@/lib/dates";
 import { markAllNotificationsRead } from "@/lib/actions/notification-actions";
 
 export type BellNotification = {
@@ -15,18 +16,22 @@ export type BellNotification = {
 
 export default function NotificationBell({
   notifications,
+  unreadCount,
 }: {
   notifications: BellNotification[];
+  unreadCount: number;
 }) {
   const [open, setOpen] = useState(false);
 
-  const unread = notifications.filter((n) => !n.read).length;
+  const unread = unreadCount;
 
   return (
-    <div className="relative">
+    <div className="relative" onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+    }} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        aria-expanded={open}
         aria-label="Уведомления"
         className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900"
       >
@@ -51,7 +56,7 @@ export default function NotificationBell({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-[340px] rounded-xl border border-gray-200 bg-white shadow-lg">
+        <div className="absolute right-0 top-12 w-[min(340px,calc(100vw-2rem))] rounded-xl border border-gray-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <span className="text-sm font-semibold text-gray-900">
               Уведомления
@@ -68,6 +73,7 @@ export default function NotificationBell({
             )}
           </div>
 
+          <Link href="/uvedomleniya" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm font-medium text-emerald-700 hover:underline">Все уведомления</Link>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-gray-500">
@@ -77,7 +83,7 @@ export default function NotificationBell({
               notifications.map((n) => (
                 <Link
                   key={n.id}
-                  href={n.link ?? "#"}
+                  href={`/uvedomleniya?notification=${encodeURIComponent(n.id)}`}
                   onClick={() => setOpen(false)}
                   className={`block border-b border-gray-50 px-4 py-3 last:border-b-0 hover:bg-gray-50 ${
                     n.read ? "" : "bg-emerald-50/50"
@@ -91,6 +97,7 @@ export default function NotificationBell({
                       <p className="text-sm font-medium text-gray-900">
                         {n.title}
                       </p>
+                      <time className="mt-1 block text-xs text-gray-400" dateTime={n.createdAt}>{formatEventDate(n.createdAt)}</time>
                       {n.body && (
                         <p className="mt-0.5 text-xs leading-relaxed text-gray-500 line-clamp-2">
                           {n.body}

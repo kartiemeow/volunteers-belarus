@@ -55,14 +55,14 @@ export function ApplyButton({
   );
 }
 
-export function NeedLogin() {
+export function NeedLogin({ opportunityId }: { opportunityId: string }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-600">
         Чтобы откликнуться на заявку, нужно войти в аккаунт волонтёра.
       </p>
       <a
-        href="/login"
+        href={`/login?next=${encodeURIComponent(`/zayavki/${opportunityId}`)}`}
         className="block w-full rounded-xl bg-emerald-600 px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
       >
         Войти или зарегистрироваться
@@ -83,7 +83,7 @@ export function AlreadyApplied() {
 export function NoSlots() {
   return (
     <div className="rounded-xl bg-gray-100 px-5 py-4 text-sm font-medium text-gray-600">
-      Все места на эту заявку уже заняты.
+      Набор на эту заявку недоступен: событие прошло, набор закрыт или все места заняты.
     </div>
   );
 }
@@ -91,7 +91,7 @@ export function NoSlots() {
 export function OrganizerView() {
   return (
     <div className="rounded-xl bg-gray-100 px-5 py-4 text-sm font-medium text-gray-600">
-      Это ваша заявка. Управлять откликами можно в личном кабинете организатора.
+      Откликаться на заявки могут только волонтёры. Организаторы управляют своими заявками в личном кабинете.
     </div>
   );
 }

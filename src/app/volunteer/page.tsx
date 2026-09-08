@@ -1,3 +1,6 @@
+import { ActionForm } from "@/components/ActionForm";
+import { OrganizerContact } from "@/components/OrganizerContact";
+import { formatEventDate as formatDate } from "@/lib/dates";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -235,13 +238,29 @@ export default async function VolunteerDashboardPage({
                       </p>
                       <p className="mt-0.5 text-sm text-amber-800">
                         Организация перенесла событие. Новая дата:{" "}
-                        <strong>{formatDateTime(a.opportunity.date)}</strong>.
+                        <strong>{formatDate(a.opportunity.date)}</strong>.
                         Подтвердите участие или откажитесь.
                       </p>
                     </div>
                   )}
 
+                {["APPROVED", "DONE", "NO_SHOW"].includes(a.status) && (
+                  <OrganizerContact contact={a.opportunity.contactInfo} address={a.opportunity.address} />
+                )}
+                {a.status === "WITHDRAWN" && <p className="mt-3 text-sm text-gray-500">Участие отменено. Место освобождено без отметки о неявке.</p>}
+
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
+                  {(["PENDING", "APPROVED"].includes(a.status) && (a.needsReconfirmation || a.opportunity.date > new Date())) && (
+                        <ActionForm action={declineParticipation}>
+                          <input type="hidden" name="applicationId" value={a.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                          >
+                            Отказаться
+                          </button>
+                        </ActionForm>
+                  )}
                   {couldRate && (
                     <Link
                       href={`/ocenit/${a.id}`}
@@ -260,7 +279,8 @@ export default async function VolunteerDashboardPage({
                   {a.needsReconfirmation &&
                     (a.status === "PENDING" || a.status === "APPROVED") && (
                       <>
-                        <form action={confirmParticipation}>
+                        <ActionForm action={confirmParticipation}>
+                          <input type="hidden" name="eventDate" value={a.opportunity.date.toISOString()} />
                           <input type="hidden" name="applicationId" value={a.id} />
                           <button
                             type="submit"
@@ -268,16 +288,8 @@ export default async function VolunteerDashboardPage({
                           >
                             Подтверждаю участие
                           </button>
-                        </form>
-                        <form action={declineParticipation}>
-                          <input type="hidden" name="applicationId" value={a.id} />
-                          <button
-                            type="submit"
-                            className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
-                          >
-                            Отказаться
-                          </button>
-                        </form>
+                        </ActionForm>
+
                       </>
                     )}
                 </div>
@@ -288,21 +300,4 @@ export default async function VolunteerDashboardPage({
       )}
     </div>
   );
-}
-
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "short",
-  }).format(d);
-}
-
-function formatDateTime(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
 }

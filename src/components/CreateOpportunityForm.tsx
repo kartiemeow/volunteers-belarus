@@ -48,7 +48,7 @@ export function CreateOpportunityForm({ minDate }: { minDate: string }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input label="Дата" name="date" type="date" required min={minDate} defaultValue={minDate} />
+        <Input label="Дата и время (Минск)" name="date" type="datetime-local" required min={minDate} defaultValue={minDate} />
         <Input label="Сколько волонтёров нужно" name="slots" type="number" min={1} max={1000} defaultValue="5" required />
       </div>
 
@@ -62,7 +62,8 @@ export function CreateOpportunityForm({ minDate }: { minDate: string }) {
       />
 
       <Input
-        label="Контакты для связи (по желанию)"
+        label="Контакты для связи"
+        required
         name="contactInfo"
         placeholder="Телефон, Telegram, email"
       />

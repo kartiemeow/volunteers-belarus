@@ -3,7 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
-import { db } from "@/lib/db";
+import { transaction } from "@/lib/transaction";
+import { actionError } from "@/lib/action-result";
 import { auth } from "@/lib/auth";
 import { CATEGORY_ORDER } from "@/lib/constants";
 
@@ -24,7 +25,7 @@ export async function updateVolunteerProfile(
   formData: FormData
 ): Promise<ProfileState> {
   const session = await auth();
-  if (!session?.user) return { error: "Нужно войти в аккаунт" };
+  if (session?.user.role !== "VOLUNTEER") return { error: "Доступно только волонтёрам" };
 
   const interests = formData.getAll("interests");
   const parsed = volunteerProfileSchema.safeParse({
@@ -42,31 +43,36 @@ export async function updateVolunteerProfile(
 
   const { name, phone, city, bio, skills, interests: interestsOk, availability } = parsed.data;
 
-  await db.user.update({
-    where: { id: session.user.id },
-    data: {
-      name,
-      phone: phone || null,
-      city: city || null,
-    },
-  });
+  try {
+    await transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          name,
+          phone: phone || null,
+          city: city || null,
+        },
+      });
 
-  await db.volunteerProfile.upsert({
-    where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      bio: bio || null,
-      skills: parseList(skills),
-      interests: interestsOk ?? [],
-      availability: availability ?? [],
-    },
-    update: {
-      bio: bio || null,
-      skills: parseList(skills),
-      interests: interestsOk ?? [],
-      availability: availability ?? [],
-    },
-  });
+      await tx.volunteerProfile.upsert({
+        where: { userId: session.user.id },
+        create: {
+          userId: session.user.id,
+          bio: bio || null,
+          skills: parseList(skills),
+          interests: interestsOk ?? [],
+          availability: availability ?? [],
+        },
+        update: {
+          bio: bio || null,
+          skills: parseList(skills),
+          interests: interestsOk ?? [],
+          availability: availability ?? [],
+        },
+      });
+
+    });
+  } catch (error) { return actionError(error); }
 
   revalidatePath("/volunteer");
   revalidatePath("/volunteer/profile");
@@ -76,7 +82,7 @@ export async function updateVolunteerProfile(
 const organizationProfileSchema = z.object({
   orgName: z.string().min(2, "Название организации должно быть не короче 2 символов"),
   description: z.string().max(2000).optional().or(z.literal("")),
-  website: z.string().max(300).optional().or(z.literal("")),
+  website: z.url({ protocol: /^https?$/ }).max(300).optional().or(z.literal("")),
   categories: z.array(z.enum(CATEGORY_ORDER)).optional(),
 });
 
@@ -85,7 +91,7 @@ export async function updateOrganizationProfile(
   formData: FormData
 ): Promise<ProfileState> {
   const session = await auth();
-  if (!session?.user) return { error: "Нужно войти в аккаунт" };
+  if (session?.user.role !== "ORGANIZER") return { error: "Доступно только организациям" };
 
   const categories = formData.getAll("categories") as string[];
   const parsed = organizationProfileSchema.safeParse({
@@ -100,27 +106,32 @@ export async function updateOrganizationProfile(
 
   const { orgName, description, website, categories: categoriesOk } = parsed.data;
 
-  await db.organizationProfile.upsert({
-    where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      orgName,
-      description: description || null,
-      website: website || null,
-      category: categoriesOk ?? [],
-    },
-    update: {
-      orgName,
-      description: description || null,
-      website: website || null,
-      category: categoriesOk ?? [],
-    },
-  });
+  try {
+    await transaction(async (tx) => {
+      await tx.organizationProfile.upsert({
+        where: { userId: session.user.id },
+        create: {
+          userId: session.user.id,
+          orgName,
+          description: description || null,
+          website: website || null,
+          category: categoriesOk ?? [],
+        },
+        update: {
+          orgName,
+          description: description || null,
+          website: website || null,
+          category: categoriesOk ?? [],
+        },
+      });
 
-  await db.user.update({
-    where: { id: session.user.id },
-    data: { name: orgName },
-  });
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: { name: orgName },
+      });
+
+    });
+  } catch (error) { return actionError(error); }
 
   revalidatePath("/organizer");
   revalidatePath("/organizer/profile");
