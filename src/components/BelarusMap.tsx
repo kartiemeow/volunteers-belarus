@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   BELARUS_CITY_COORDS,
   BELARUS_MAP_PATH,
@@ -10,6 +11,13 @@ import {
 
 export type MapApplication = { id: string; title: string };
 export type MapCity = { city: string; apps: MapApplication[] };
+
+const LON_SPAN = MAP_BOUNDS.lonMax - MAP_BOUNDS.lonMin;
+const LAT_SPAN = MAP_BOUNDS.latMax - MAP_BOUNDS.latMin;
+const WORLD_W = 100;
+const WORLD_H = 51.17;
+const MIN_SCALE = 1;
+const MAX_SCALE = 9;
 
 export default function BelarusMap({
   cities,
@@ -25,9 +33,66 @@ export default function BelarusMap({
   totalCount: number;
 }) {
   const router = useRouter();
-  const { lonMin, lonMax, latMin, latMax } = MAP_BOUNDS;
-  const lonSpan = lonMax - lonMin;
-  const latSpan = latMax - latMin;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState({ s: 1, tx: 0, ty: (100 - WORLD_H) / 2 });
+  const sRef = useRef(1);
+  const txRef = useRef(0);
+  const tyRef = useRef((100 - WORLD_H) / 2);
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
+
+  function applyView(s: number, tx: number, ty: number) {
+    sRef.current = s;
+    txRef.current = tx;
+    tyRef.current = ty;
+    setView({ s, tx, ty });
+  }
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cx = ((e.clientX - rect.left) / rect.width) * 100;
+      const cy = ((e.clientY - rect.top) / rect.width) * 100;
+      const s0 = sRef.current;
+      const s1 = Math.min(MAX_SCALE, Math.max(MIN_SCALE, s0 * (e.deltaY < 0 ? 1.2 : 0.85)));
+      const wx = (cx - txRef.current) / s0;
+      const wy = (cy - tyRef.current) / s0;
+      applyView(s1, cx - wx * s1, cy - wy * s1);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  function zoomAt(factor: number, cx = 50, cy = 50) {
+    const s0 = sRef.current;
+    const s1 = Math.min(MAX_SCALE, Math.max(MIN_SCALE, s0 * factor));
+    const wx = (cx - txRef.current) / s0;
+    const wy = (cy - tyRef.current) / s0;
+    applyView(s1, cx - wx * s1, cy - wy * s1);
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    dragRef.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - drag.x) / rect.width) * 100;
+    const dy = ((e.clientY - drag.y) / rect.width) * 100;
+    dragRef.current = { x: e.clientX, y: e.clientY };
+    const cl = (v: number) => Math.min(150, Math.max(-150, v));
+    applyView(sRef.current, cl(txRef.current + dx), cl(tyRef.current + dy));
+  }
+
+  function onPointerUp() {
+    dragRef.current = null;
+  }
 
   function selectCity(city: string) {
     const next = city === activeCity ? "" : city;
@@ -42,41 +107,67 @@ export default function BelarusMap({
     .map((city) => {
       const coord = BELARUS_CITY_COORDS[city.city];
       if (!coord) return null;
-      const x = ((coord.lon - lonMin) / lonSpan) * 100;
-      const y = ((latMax - coord.lat) / latSpan) * 100;
-      return { ...city, x, y, active: city.city === activeCity };
+      const fx = (coord.lon - MAP_BOUNDS.lonMin) / LON_SPAN;
+      const fyLat = (MAP_BOUNDS.latMax - coord.lat) / LAT_SPAN;
+      return { ...city, fx, fyLat, active: city.city === activeCity };
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
   return (
-    <div className="w-full max-w-sm md:w-80">
-      <div className="relative aspect-square w-full select-none rounded-2xl bg-emerald-600 shadow-sm">
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
-          aria-hidden="true"
+    <div className="w-full lg:w-80 xl:w-96">
+      <div
+        ref={wrapRef}
+        className="relative aspect-square w-full touch-none select-none overflow-hidden rounded-2xl bg-emerald-600 shadow-sm"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+      >
+        <div
+          className="absolute left-0 top-0"
+          style={{
+            left: `${view.tx}%`,
+            top: `${view.ty}%`,
+            width: `${WORLD_W * view.s}%`,
+            height: `${WORLD_H * view.s}%`,
+          }}
         >
-          <path
-            d={BELARUS_MAP_PATH}
-            fill="#ffffff"
-            fillOpacity={0.18}
-            stroke="#ffffff"
-            strokeOpacity={0.35}
-            strokeWidth={0.4}
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
+          <svg
+            viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
+            preserveAspectRatio="none"
+            className="block h-full w-full"
+            aria-hidden="true"
+          >
+            <path
+              d={BELARUS_MAP_PATH}
+              transform="scale(1,0.5117)"
+              fill="#ffffff"
+              fillOpacity={0.18}
+              stroke="#ffffff"
+              strokeOpacity={0.4}
+              strokeWidth={0.6}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+        </div>
 
         {markers.map((m) => {
+          const sx = m.fx * WORLD_W * view.s + view.tx;
+          const sy = m.fyLat * WORLD_H * view.s + view.ty;
+          if (sx < -10 || sx > 110 || sy < -10 || sy > 110) return null;
           const alignX =
-            m.x < 30 ? "left-0" : m.x > 70 ? "right-0" : "left-1/2 -translate-x-1/2";
-          const alignY = m.y < 45 ? "top-full mt-2" : "bottom-full mb-2";
+            m.fx < 0.3 ? "left-0" : m.fx > 0.7 ? "right-0" : "left-1/2 -translate-x-1/2";
+          const alignY = m.fyLat < 0.45 ? "top-full mt-2" : "bottom-full mb-2";
           return (
             <div
               key={m.city}
-              className="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${m.x}%`, top: `${m.y}%` }}
+              className="group absolute z-10"
+              style={{
+                left: `${sx}%`,
+                top: `${sy}%`,
+                transform: "translate(-50%, -50%)",
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
@@ -99,8 +190,7 @@ export default function BelarusMap({
                 <div className="rounded-xl bg-white p-3 shadow-xl shadow-emerald-950/30">
                   <p className="text-sm font-bold text-emerald-800">{m.city}</p>
                   <p className="mt-0.5 text-xs font-medium text-emerald-600">
-                    {m.apps.length}{" "}
-                    {pluralize(m.apps.length)}
+                    {m.apps.length} {pluralize(m.apps.length)}
                   </p>
                   <ul className="mt-1.5 space-y-1">
                     {m.apps.slice(0, 3).map((a) => (
@@ -125,10 +215,36 @@ export default function BelarusMap({
           );
         })}
 
-        <div className="pointer-events-none absolute bottom-2.5 left-1/2 -translate-x-1/2 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white">
-          {totalCount} {pluralize(totalCount)} во всех городах
+        {markers.length > 0 && (
+          <div className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+            {totalCount} {pluralize(totalCount)}
+          </div>
+        )}
+
+        <div className="pointer-events-none absolute right-2.5 top-2.5 flex flex-col gap-1.5">
+          <button
+            type="button"
+            aria-label="Приблизить"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => zoomAt(1.3)}
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-emerald-700 shadow transition hover:bg-white"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            aria-label="Отдалить"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => zoomAt(1 / 1.3)}
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-emerald-700 shadow transition hover:bg-white"
+          >
+            −
+          </button>
         </div>
       </div>
+      <p className="mt-1.5 text-center text-xs text-gray-500">
+        Колесо мыши — приближение, перетаскивание — перемещение
+      </p>
     </div>
   );
 }

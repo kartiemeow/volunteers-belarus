@@ -67,11 +67,20 @@ export default async function OpportunitiesPage(
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Заявки на помощь</h1>
         <p className="mt-2 text-gray-600">
           Здесь собраны запросы от приютов, социальных служб, поисковых отрядов
           и городских инициатив по всей Беларуси.
+        </p>
+        <p className="mt-3 text-sm text-gray-700">
+          <strong className="text-emerald-700">Найдено: {opportunities.length}</strong>{" "}
+          {pluralize(opportunities.length)}
+          {opportunities.length === 0 && (
+            <Link href="/register" className="ml-3 font-medium text-emerald-600 hover:underline">
+              Организация? Разместите свою заявку
+            </Link>
+          )}
         </p>
       </div>
 
@@ -82,39 +91,30 @@ export default async function OpportunitiesPage(
         query={query}
       />
 
-      <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="text-sm text-gray-600">
-          <span>
-            Найдено: <strong>{opportunities.length}</strong>{" "}
-            {pluralize(opportunities.length)}
-          </span>
-          {opportunities.length === 0 && (
-            <Link href="/register" className="ml-2 font-medium text-emerald-600 hover:underline">
-              Организация? Разместите свою заявку
-            </Link>
-          )}
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:gap-8">
+        <div className="order-1 w-full lg:order-2 lg:w-80 lg:shrink-0 xl:w-96">
+          <BelarusMap
+            cities={cityMarkers}
+            activeCity={city}
+            activeCategory={category}
+            activeQuery={query}
+            totalCount={allOpportunities.length}
+          />
         </div>
-        <BelarusMap
-          cities={cityMarkers}
-          activeCity={city}
-          activeCategory={category}
-          activeQuery={query}
-          totalCount={allOpportunities.length}
-        />
-      </div>
 
-      {opportunities.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-          <p className="text-lg font-medium text-gray-700">
-            По запросу ничего не найдено
-          </p>
-          <p className="mt-1 text-gray-500">
-            Попробуйте изменить фильтры или сбросить поисковый запрос.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {opportunities.map((o) => (
+        <div className="order-2 min-w-0 flex-1 lg:order-1">
+          {opportunities.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
+              <p className="text-lg font-medium text-gray-700">
+                По запросу ничего не найдено
+              </p>
+              <p className="mt-1 text-gray-500">
+                Попробуйте изменить фильтры или сбросить поисковый запрос.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {opportunities.map((o) => (
             <Link
               key={o.id}
               href={`/zayavki/${o.id}`}
@@ -160,6 +160,8 @@ export default async function OpportunitiesPage(
           ))}
         </div>
       )}
+      </div>
+    </div>
     </div>
   );
 }
