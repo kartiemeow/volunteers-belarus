@@ -82,16 +82,16 @@ function HeaderSkeleton() {
             <Skeleton className="h-2.5 w-44" />
           </span>
         </div>
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-8 w-20 rounded-lg" />
           ))}
         </nav>
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <Skeleton className="h-9 w-20 rounded-lg" />
           <Skeleton className="h-9 w-32 rounded-lg" />
         </div>
-        <Skeleton className="flex h-10 w-10 items-center justify-center rounded-lg md:hidden" />
+        <Skeleton className="flex h-10 w-10 items-center justify-center rounded-lg lg:hidden" />
       </div>
     </header>
   );

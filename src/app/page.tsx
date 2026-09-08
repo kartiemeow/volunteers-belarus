@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HeroTogether from "@/components/HeroTogether";
 import type { ComponentType } from "react";
 import { db } from "@/lib/db";
 import {
@@ -56,8 +57,8 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white">
         <div className="pointer-events-none absolute inset-0 opacity-10 [background-image:radial-gradient(circle_at_20%_20%,white_1px,transparent_1px)] [background-size:28px_28px]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
-          <div className="max-w-2xl">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[552px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8 lg:py-6">
+          <div className="min-w-0 max-w-2xl">
             <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl">
 Помогать стало проще. Вся волонтёрская помощь Беларуси в одном
 месте.
@@ -81,6 +82,7 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
+          <HeroTogether />
         </div>
       </section>
 

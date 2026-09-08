@@ -57,7 +57,7 @@ export default function Header({
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -73,7 +73,7 @@ export default function Header({
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           {user ? (
             <>
               <NotificationBell notifications={notifications} />
@@ -135,8 +135,10 @@ export default function Header({
         {/* Mobile toggle */}
         <button
           onClick={() => setMobileOpen((v) => !v)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 lg:hidden"
           aria-label="Меню"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {mobileOpen ? (
@@ -156,7 +158,7 @@ export default function Header({
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-gray-200 bg-white px-4 py-3 md:hidden">
+        <div id="mobile-navigation" className="border-t border-gray-200 bg-white px-4 py-3 lg:hidden">
           <nav className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
               <Link
