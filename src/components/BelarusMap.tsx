@@ -140,7 +140,6 @@ export default function BelarusMap({
           >
             <path
               d={BELARUS_MAP_PATH}
-              transform="scale(1,0.5117)"
               fill="#ffffff"
               fillOpacity={0.18}
               stroke="#ffffff"
