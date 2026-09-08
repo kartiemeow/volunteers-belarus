@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual, randomInt } from "node:crypto";
 import nodemailer from "nodemailer";
 
 export const CODE_LENGTH = 6;
@@ -9,7 +9,7 @@ export const MAX_ATTEMPTS = 5;
 export function generateVerificationCode(): string {
   const min = Math.pow(10, CODE_LENGTH - 1);
   const max = min * 10;
-  return String(Math.floor(min + Math.random() * (max - min)));
+  return String(randomInt(min, max));
 }
 
 export function hashVerificationCode(code: string): string {
@@ -25,12 +25,6 @@ export function codesEqual(a: string, b: string): boolean {
 
 function senderName(): string {
   return process.env.MAIL_FROM_NAME ?? "Волонтёры Беларуси";
-}
-
-const SMTP_IP_FALLBACKS = ["142.251.127.109"];
-
-function isIpLike(host: string): boolean {
-  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
 }
 
 async function sendViaSmtp(to: string, subject: string, html: string): Promise<void> {
@@ -53,24 +47,15 @@ async function sendViaSmtp(to: string, subject: string, html: string): Promise<v
     html,
   };
 
-  for (const candidate of [host, ...SMTP_IP_FALLBACKS]) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: candidate,
-        port,
-        secure,
-        auth: { user, pass },
-        tls: isIpLike(candidate) ? { servername: host } : undefined,
-      });
-      await transporter.sendMail(mail);
-      return;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (/Invalid login|Username and Password|5\.7\.8|5\.3\.4|Application-specific/i.test(msg)) throw err;
-      console.error(`[email] Не удалось через ${candidate}: ${msg}`);
-    }
+  const transporter = nodemailer.createTransport({
+    host, port, secure, auth: { user, pass },
+    dnsTimeout: 10_000, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 15_000,
+  });
+  try {
+    await transporter.sendMail(mail);
+  } finally {
+    transporter.close();
   }
-  throw new Error("EMAIL_SEND_FAILED");
 }
 
 async function sendViaBrevo(to: string, subject: string, html: string): Promise<void> {
@@ -83,6 +68,7 @@ async function sendViaBrevo(to: string, subject: string, html: string): Promise<
 
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
+    signal: AbortSignal.timeout(20_000),
     headers: {
       accept: "application/json",
       "content-type": "application/json",
@@ -121,7 +107,6 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
 
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
   const siteUrl = process.env.NEXTAUTH_URL ?? "https://volunteers-belarus.vercel.app";
-  console.info(`[email] Код подтверждения для ${to}: ${code} (отладочная информация)`);
 
   await sendEmail(
     to,

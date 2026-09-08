@@ -5,30 +5,20 @@ import {
   CATEGORY_COLORS,
   CATEGORY_ORDER,
 } from "@/lib/constants";
-import { db } from "@/lib/db";
+import { getOrganizations } from "@/lib/public-organizations";
+import { Pagination } from "@/components/Pagination";
+import { pageNumber } from "@/lib/pagination";
 import { IconStar } from "@/components/icons";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Организации" };
 
-export default async function OrganizationsPage() {
-  const organizations = await db.organizationProfile.findMany({
-    orderBy: [{ verified: "desc" }, { createdAt: "asc" }],
-    include: {
-      user: true,
-      opportunities: {
-        select: {
-          id: true,
-          status: true,
-          applications: { select: { status: true, volunteerId: true } },
-        },
-      },
-      ratings: { select: { score: true } },
-    },
-  });
+export default async function OrganizationsPage(props: PageProps<"/organizacii">) {
+  const params = await props.searchParams;
+  const page = pageNumber(params.page);
+  const { organizations, total } = await getOrganizations(page);
 
-  if (organizations.length === 0) {
+  if (total === 0) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <h1 className="text-3xl font-bold text-gray-900">Организации</h1>
@@ -64,19 +54,7 @@ export default async function OrganizationsPage() {
 
       <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
         {organizations.map((org) => {
-          const openCount = org.opportunities.filter(
-            (o) => o.status === "OPEN"
-          ).length;
-          const doneApplications = org.opportunities.flatMap((o) =>
-            o.applications.filter((a) => a.status === "DONE")
-          );
-          const helpedVolunteers = new Set(
-            doneApplications.map((a) => a.volunteerId)
-          ).size;
-          const ratingCount = org.ratings.length;
-          const ratingAvg = ratingCount
-            ? org.ratings.reduce((sum, r) => sum + r.score, 0) / ratingCount
-            : null;
+          const { openCount, doneCount, helpedVolunteers, ratingCount, ratingAvg } = org;
 
           return (
             <div
@@ -138,10 +116,10 @@ export default async function OrganizationsPage() {
                 </div>
                 <div>
                   <dt className="text-lg font-bold text-gray-900">
-                    {doneApplications.length}
+                    {doneCount}
                   </dt>
                   <dd className="text-xs text-gray-500">
-                    {pluralize(doneApplications.length, "выполненная заявка", "выполненные заявки", "выполненных заявок")}
+                    {pluralize(doneCount, "выполненная заявка", "выполненные заявки", "выполненных заявок")}
                   </dd>
                 </div>
                 <div>
@@ -176,6 +154,7 @@ export default async function OrganizationsPage() {
           );
         })}
       </div>
+      <Pagination pathname="/organizacii" params={params} page={page} total={total} />
     </div>
   );
 }

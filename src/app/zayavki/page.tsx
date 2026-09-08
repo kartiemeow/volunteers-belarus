@@ -4,14 +4,14 @@ import {
   CATEGORY_SHORT,
   OPPORTUNITY_STATUS_COLORS,
   OPPORTUNITY_STATUS_LABELS,
-  CATEGORY_ORDER,
 } from "@/lib/constants";
-import { db } from "@/lib/db";
+import { catalogFilters, getCatalog } from "@/lib/public-opportunities";
+import { Pagination } from "@/components/Pagination";
+import { pageNumber } from "@/lib/pagination";
 import { OpportunityFilterBar } from "@/components/OpportunityFilterBar";
-import BelarusMap, { type MapCity } from "@/components/BelarusMap";
+import { CatalogMap } from "@/components/CatalogMap";
 import { IconMapPin, IconCalendar } from "@/components/icons";
 
-export const dynamic = "force-dynamic";
 
 const CITY_SUGGESTIONS = [
   "Минск",
@@ -26,44 +26,11 @@ export default async function OpportunitiesPage(
   props: PageProps<"/zayavki">
 ) {
   const searchParams = await props.searchParams;
-  const category = typeof searchParams.category === "string" ? searchParams.category : "";
-  const city = typeof searchParams.city === "string" ? searchParams.city : "";
-  const query = typeof searchParams.q === "string" ? searchParams.q : "";
-
-  const where = {
-    ...(category && CATEGORY_ORDER.includes(category as never)
-      ? { category: category as (typeof CATEGORY_ORDER)[number] }
-      : {}),
-    ...(city ? { city } : {}),
-    ...(query
-      ? {
-          OR: [
-            { title: { contains: query, mode: "insensitive" as const } },
-            { description: { contains: query, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-  };
-
-  const opportunities = await db.opportunity.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: { organizer: { include: { user: true } } },
-  });
-
-  const allOpportunities = await db.opportunity.findMany({
-    select: { id: true, title: true, city: true },
-  });
-
-  const cityMap = new Map<string, { id: string; title: string }[]>();
-  for (const o of allOpportunities) {
-    const list = cityMap.get(o.city) ?? [];
-    list.push({ id: o.id, title: o.title });
-    cityMap.set(o.city, list);
-  }
-  const cityMarkers: MapCity[] = Array.from(cityMap.entries()).map(
-    ([city, apps]) => ({ city, apps })
-  );
+  const filters = catalogFilters(searchParams);
+  const { city, query } = filters;
+  const category = filters.category ?? "";
+  const page = pageNumber(searchParams.page);
+  const { opportunities, total } = await getCatalog(filters, page);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -74,8 +41,8 @@ export default async function OpportunitiesPage(
           и городских инициатив по всей Беларуси.
         </p>
         <p className="mt-3 text-sm text-gray-700">
-          <strong className="text-emerald-700">Найдено: {opportunities.length}</strong>{" "}
-          {pluralize(opportunities.length)}
+          <strong className="text-emerald-700">Найдено: {total}</strong>{" "}
+          {pluralize(total)}
           {opportunities.length === 0 && (
             <Link href="/register" className="ml-3 font-medium text-emerald-600 hover:underline">
               Организация? Разместите свою заявку
@@ -92,17 +59,16 @@ export default async function OpportunitiesPage(
       />
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:gap-8">
-        <div className="order-1 w-full lg:order-2 lg:w-80 lg:shrink-0 xl:w-96">
-          <BelarusMap
-            cities={cityMarkers}
+        <div className="order-2 w-full lg:order-2 lg:w-80 lg:shrink-0 xl:w-96">
+          <CatalogMap
+            key={`${category}:${city}:${query}`}
             activeCity={city}
             activeCategory={category}
             activeQuery={query}
-            totalCount={allOpportunities.length}
           />
         </div>
 
-        <div className="order-2 min-w-0 flex-1 lg:order-1">
+        <div className="order-1 min-w-0 flex-1 lg:order-1">
           {opportunities.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
               <p className="text-lg font-medium text-gray-700">
@@ -160,6 +126,7 @@ export default async function OpportunitiesPage(
           ))}
         </div>
       )}
+      <Pagination pathname="/zayavki" params={searchParams} page={page} total={total} />
       </div>
     </div>
     </div>
@@ -171,7 +138,7 @@ function formatDate(d: Date) {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(d);
+  }).format(new Date(d));
 }
 
 function pluralize(n: number) {

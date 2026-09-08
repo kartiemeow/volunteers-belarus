@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -8,15 +10,18 @@ import { toggleNewsPublished, deleteNewsPost } from "@/lib/actions/news-actions"
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminNewsPage() {
+export default async function AdminNewsPage(props: PageProps<"/admin/news">) {
   const session = await auth();
   if (!session?.user) redirect("/login?next=/admin/news");
   if (session.user.role !== "ADMIN") redirect("/");
 
-  const posts = await db.newsPost.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { author: { select: { name: true } } },
-  });
+  const params = await props.searchParams;
+  const page = pageNumber(params.page);
+  const [posts, total] = await Promise.all([db.newsPost.findMany({
+    take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: { id: true, title: true, slug: true, published: true, createdAt: true, author: { select: { name: true } } },
+  }), db.newsPost.count()]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -96,6 +101,7 @@ export default async function AdminNewsPage() {
           </div>
         ))}
       </div>
+      <Pagination pathname="/admin/news" params={params} page={page} total={total} />
     </div>
   );
 }

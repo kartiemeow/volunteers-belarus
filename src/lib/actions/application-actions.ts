@@ -1,12 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { notifyUser } from "@/lib/notifications";
+import { reserveApplication, transitionApplication } from "@/lib/application-service";
 
 export type ApplicationState = { error?: string; success?: string } | undefined;
 
@@ -66,28 +66,20 @@ export async function applyToOpportunity(
     return { error: "Вы уже отправляли отклик на эту заявку" };
   }
 
-  const noSlots = new Error("no-slots");
   try {
-    await db.$transaction(async (tx) => {
-      const reserved = await tx.opportunity.updateMany({
-        where: { id: opportunityId, filledSlots: { lt: opportunity.slots } },
-        data: { filledSlots: { increment: 1 } },
-      });
-      if (reserved.count === 0) throw noSlots;
-      await tx.application.create({
-        data: {
-          opportunityId,
-          volunteerId: profile.id,
-          message: message?.trim() || null,
-        },
-      });
-    });
-  } catch (err) {
-    if (err === noSlots) {
-      return { error: "Все места уже заняты" };
+    if (!await reserveApplication(opportunityId, profile.id, message)) {
+      return { error: "Набор закрыт, места заняты или отклик уже отправлен" };
     }
+  } catch {
     return { error: "Не удалось отправить отклик. Попробуйте ещё раз." };
   }
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
+  revalidatePath(`/zayavki/${opportunityId}`);
+  revalidatePath("/zayavki");
+  revalidatePath("/organizer");
+  revalidatePath("/volunteer");
 
   return { success: "Отклик отправлен! Организатор свяжется с вами." };
 }
@@ -98,6 +90,7 @@ export async function toggleOpportunityStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
 
   if (!session?.user || session.user.role !== "ORGANIZER") return;
+  if (status !== "OPEN" && status !== "CLOSED") return;
 
   const opportunity = await db.opportunity.findFirst({
     where: {
@@ -112,6 +105,9 @@ export async function toggleOpportunityStatus(formData: FormData) {
     data: { status: status as "OPEN" | "CLOSED" },
   });
 
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
   revalidatePath(`/zayavki/${id}`);
   revalidatePath("/organizer");
 }
@@ -147,47 +143,15 @@ export async function declineParticipation(formData: FormData) {
   if (!session?.user || session.user.role !== "VOLUNTEER") return;
 
   const applicationId = String(formData.get("applicationId") ?? "");
-  const volunteer = await db.volunteerProfile.findUnique({
-    where: { userId: session.user.id },
-    include: { user: { select: { name: true } } },
-  });
-  if (!volunteer) return;
+  const opportunityId = await transitionApplication(applicationId, "REJECTED", { volunteerUserId: session.user.id });
+  if (!opportunityId) return;
 
-  const application = await db.application.findFirst({
-    where: { id: applicationId, volunteerId: volunteer.id },
-    include: {
-      opportunity: { include: { organizer: { include: { user: true } } } },
-    },
-  });
-  if (!application || !application.needsReconfirmation) return;
-
-  if (application.status === "PENDING" || application.status === "APPROVED") {
-    await db.opportunity.update({
-      where: { id: application.opportunityId },
-      data: {
-        filledSlots: {
-          decrement: application.opportunity.filledSlots > 0 ? 1 : 0,
-        },
-      },
-    });
-  }
-
-  await db.application.update({
-    where: { id: applicationId },
-    data: { status: "REJECTED", needsReconfirmation: false },
-  });
-
-  await notifyUser(
-    application.opportunity.organizer.userId,
-    "PARTICIPATION_DECLINED",
-    "Волонтёр отказался от участия",
-    `${volunteer.user.name} отказался от участия в «${application.opportunity.title}» после переноса даты события.`,
-    `/organizer/opportunities/${application.opportunityId}`
-  );
-
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
   revalidatePath("/volunteer");
-  revalidatePath(`/zayavki/${application.opportunityId}`);
-  revalidatePath(`/organizer/opportunities/${application.opportunityId}`);
+  revalidatePath(`/zayavki/${opportunityId}`);
+  revalidatePath(`/organizer/opportunities/${opportunityId}`);
   revalidatePath("/zayavki");
   revalidatePath("/organizer");
 }

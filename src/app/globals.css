@@ -9,7 +9,6 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 body {
@@ -30,7 +29,7 @@ body {
 }
 
 .page-enter {
-  animation: page-enter 240ms ease-out both;
+  animation: page-enter 120ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -70,7 +69,8 @@ button:disabled,
   border-radius: 1px;
   animation-name: confetti-fall;
   animation-timing-function: ease-in;
-  animation-iteration-count: infinite;
+  animation-iteration-count: 3;
+  animation-fill-mode: forwards;
 }
 
 @keyframes confetti-fall {

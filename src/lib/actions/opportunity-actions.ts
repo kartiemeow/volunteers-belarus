@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
@@ -73,6 +73,9 @@ export async function createOpportunity(
     },
   });
 
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
   revalidatePath("/zayavki");
   redirect(`/zayavki/${opportunity.id}`);
 }

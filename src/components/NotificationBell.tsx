@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { markAllNotificationsRead } from "@/lib/actions/notification-actions";
+import { markAllNotificationsRead, refreshNotifications } from "@/lib/actions/notification-actions";
 
 export type BellNotification = {
   id: string;
@@ -14,19 +14,43 @@ export type BellNotification = {
 };
 
 export default function NotificationBell({
-  notifications,
+  notifications: initialNotifications,
+  unreadCount,
 }: {
   notifications: BellNotification[];
+  unreadCount: number;
 }) {
   const [open, setOpen] = useState(false);
 
-  const unread = notifications.filter((n) => !n.read).length;
+  const [data, setData] = useState({ notifications: initialNotifications, unreadCount });
+  const [previousNotifications, setPreviousNotifications] = useState(initialNotifications);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
+  const request = useRef(0);
+  if (previousNotifications !== initialNotifications) {
+    setPreviousNotifications(initialNotifications);
+    setData({ notifications: initialNotifications, unreadCount });
+  }
+  const { notifications, unreadCount: unread } = data;
+  async function update(markRead = false) {
+    const version = ++request.current;
+    setPending(true);
+    setError(false);
+    try {
+      const next = await (markRead ? markAllNotificationsRead() : refreshNotifications());
+      if (version === request.current) setData(next);
+    } catch {
+      if (version === request.current) setError(true);
+    } finally {
+      if (version === request.current) setPending(false);
+    }
+  }
 
   return (
-    <div className="relative">
+    <div className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
       <button
-        onClick={() => setOpen((v) => !v)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onClick={() => { setOpen(!open); if (!open) void update(); }}
+        aria-expanded={open}
         aria-label="Уведомления"
         className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900"
       >
@@ -57,9 +81,10 @@ export default function NotificationBell({
               Уведомления
             </span>
             {unread > 0 && (
-              <form action={markAllNotificationsRead}>
+              <form action={() => update(true)}>
                 <button
                   type="submit"
+                  disabled={pending}
                   className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
                 >
                   Отметить всё прочитанным
@@ -68,7 +93,8 @@ export default function NotificationBell({
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
+          {error && <p role="alert" className="px-4 py-2 text-sm text-red-700">Не удалось обновить уведомления. Попробуйте ещё раз.</p>}
+          <div aria-busy={pending} className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-gray-500">
                 Пока нет уведомлений

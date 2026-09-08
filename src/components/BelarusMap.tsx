@@ -10,7 +10,7 @@ import {
 } from "@/lib/map-data";
 
 export type MapApplication = { id: string; title: string };
-export type MapCity = { city: string; apps: MapApplication[] };
+export type MapCity = { city: string; count: number; apps: MapApplication[] };
 
 const LON_SPAN = MAP_BOUNDS.lonMax - MAP_BOUNDS.lonMin;
 const LAT_SPAN = MAP_BOUNDS.latMax - MAP_BOUNDS.latMin;
@@ -189,7 +189,7 @@ export default function BelarusMap({
                 <div className="rounded-xl bg-white p-3 shadow-xl shadow-emerald-950/30">
                   <p className="text-sm font-bold text-emerald-800">{m.city}</p>
                   <p className="mt-0.5 text-xs font-medium text-emerald-600">
-                    {m.apps.length} {pluralize(m.apps.length)}
+                    {m.count} {pluralize(m.count)}
                   </p>
                   <ul className="mt-1.5 space-y-1">
                     {m.apps.slice(0, 3).map((a) => (
@@ -203,9 +203,9 @@ export default function BelarusMap({
                       </li>
                     ))}
                   </ul>
-                  {m.apps.length > 3 && (
+                  {m.count > 3 && (
                     <p className="mt-1 text-xs text-emerald-600/80">
-                      и ещё {m.apps.length - 3}
+                      и ещё {m.count - 3}
                     </p>
                   )}
                 </div>

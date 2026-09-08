@@ -17,8 +17,13 @@ export function OpportunityFilterBar({
   query?: string;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [q, setQ] = useState(query);
+  const [previousQuery, setPreviousQuery] = useState(query);
+  if (previousQuery !== query) {
+    setPreviousQuery(query);
+    setQ(query);
+  }
 
   function apply(params: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
@@ -28,11 +33,13 @@ export function OpportunityFilterBar({
     if (category) sp.set("category", category);
     if (city) sp.set("city", city);
     if (sQuery) sp.set("q", sQuery);
-    startTransition(() => router.push(`/zayavki${sp.size ? `?${sp.toString()}` : ""}`));
+    startTransition(() => router.push(`/zayavki${sp.size ? `?${sp.toString()}` : ""}`, { scroll: false }));
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+    <div aria-busy={isPending} className="rounded-2xl border border-gray-200 bg-white p-5">
+      <p role="status" className="sr-only">{isPending ? "Обновляем результаты…" : ""}</p>
+      {isPending && <p className="mb-3 text-sm text-emerald-700">Обновляем результаты…</p>}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         {/* Search */}
         <div className="flex-1">

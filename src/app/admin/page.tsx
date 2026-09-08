@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -14,12 +16,16 @@ import { CATEGORY_SHORT, OPPORTUNITY_STATUS_LABELS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
+export default async function AdminPage(props: PageProps<"/admin">) {
   const session = await auth();
   if (!session?.user) redirect("/login?next=/admin");
   if (session.user.role !== "ADMIN") redirect("/");
 
-  const [userCount, orgCount, volCount, oppCount, appCount, organizations, opportunities, users] =
+  const params = await props.searchParams;
+  const userPage = pageNumber(params.userPage);
+  const orgPage = pageNumber(params.orgPage);
+  const opportunityPage = pageNumber(params.opportunityPage);
+  const [userCount, orgCount, volCount, oppCount, appCount, organizations, opportunities, users, pendingApplications] =
     await Promise.all([
       db.user.count(),
       db.organizationProfile.count(),
@@ -27,21 +33,23 @@ export default async function AdminPage() {
       db.opportunity.count(),
       db.application.count(),
       db.organizationProfile.findMany({
+        take: PAGE_SIZE, skip: (orgPage - 1) * PAGE_SIZE,
         include: { user: true, _count: { select: { opportunities: true } } },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       }),
       db.opportunity.findMany({
         include: { organizer: true },
-        orderBy: { createdAt: "desc" },
-        take: 20,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: PAGE_SIZE, skip: (opportunityPage - 1) * PAGE_SIZE,
       }),
       db.user.findMany({
+        take: PAGE_SIZE, skip: (userPage - 1) * PAGE_SIZE,
         select: { id: true, name: true, email: true, role: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       }),
+      db.application.count({ where: { status: "PENDING" } }),
     ]);
 
-  const pendingApplications = await db.application.count({ where: { status: "PENDING" } });
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -219,6 +227,7 @@ export default async function AdminPage() {
         ))}
       </div>
 
+      <Pagination pathname="/admin" params={params} page={orgPage} total={orgCount} pageKey="orgPage" />
       {/* Users */}
       <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">
         Пользователи
@@ -326,6 +335,7 @@ export default async function AdminPage() {
         ))}
       </div>
 
+      <Pagination pathname="/admin" params={params} page={userPage} total={userCount} pageKey="userPage" />
       {/* Recent opportunities */}
       <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">
         Последние заявки
@@ -433,6 +443,7 @@ export default async function AdminPage() {
           </div>
         ))}
       </div>
+      <Pagination pathname="/admin" params={params} page={opportunityPage} total={oppCount} pageKey="opportunityPage" />
     </div>
   );
 }

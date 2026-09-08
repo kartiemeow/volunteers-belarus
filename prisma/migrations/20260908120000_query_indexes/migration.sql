@@ -1,0 +1,10 @@
+DROP INDEX "EmailVerification_email_idx";
+CREATE INDEX "Opportunity_organizerId_createdAt_id_idx" ON "Opportunity"("organizerId", "createdAt", "id");
+CREATE INDEX "Opportunity_status_createdAt_id_idx" ON "Opportunity"("status", "createdAt", "id");
+CREATE INDEX "Opportunity_createdAt_id_idx" ON "Opportunity"("createdAt", "id");
+CREATE INDEX "Application_volunteerId_status_createdAt_id_idx" ON "Application"("volunteerId", "status", "createdAt", "id");
+CREATE INDEX "NewsPost_published_createdAt_id_idx" ON "NewsPost"("published", "createdAt", "id");
+CREATE INDEX "Rating_organizationId_idx" ON "Rating"("organizationId");
+CREATE INDEX "Rating_volunteerId_idx" ON "Rating"("volunteerId");
+CREATE INDEX "Notification_userId_createdAt_id_idx" ON "Notification"("userId", "createdAt", "id");
+CREATE INDEX "Notification_userId_read_idx" ON "Notification"("userId", "read");

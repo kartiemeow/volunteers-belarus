@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
@@ -61,12 +62,12 @@ export function NeedLogin() {
       <p className="text-sm text-gray-600">
         Чтобы откликнуться на заявку, нужно войти в аккаунт волонтёра.
       </p>
-      <a
+      <Link
         href="/login"
         className="block w-full rounded-xl bg-emerald-600 px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
       >
         Войти или зарегистрироваться
-      </a>
+      </Link>
     </div>
   );
 }
