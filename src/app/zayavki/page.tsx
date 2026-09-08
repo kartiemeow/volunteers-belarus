@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { OpportunityFilterBar } from "@/components/OpportunityFilterBar";
+import BelarusMap, { type MapCity } from "@/components/BelarusMap";
 import { IconMapPin, IconCalendar } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,20 @@ export default async function OpportunitiesPage(
     include: { organizer: { include: { user: true } } },
   });
 
+  const allOpportunities = await db.opportunity.findMany({
+    select: { id: true, title: true, city: true },
+  });
+
+  const cityMap = new Map<string, { id: string; title: string }[]>();
+  for (const o of allOpportunities) {
+    const list = cityMap.get(o.city) ?? [];
+    list.push({ id: o.id, title: o.title });
+    cityMap.set(o.city, list);
+  }
+  const cityMarkers: MapCity[] = Array.from(cityMap.entries()).map(
+    ([city, apps]) => ({ city, apps })
+  );
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
       <div className="mb-8">
@@ -67,16 +82,25 @@ export default async function OpportunitiesPage(
         query={query}
       />
 
-      <div className="mt-8 flex items-center justify-between text-sm text-gray-600">
-        <span>
-          Найдено: <strong>{opportunities.length}</strong>{" "}
-          {pluralize(opportunities.length)}
-        </span>
-        {opportunities.length === 0 && (
-          <Link href="/register" className="font-medium text-emerald-600 hover:underline">
-            Организация? Разместите свою заявку
-          </Link>
-        )}
+      <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="text-sm text-gray-600">
+          <span>
+            Найдено: <strong>{opportunities.length}</strong>{" "}
+            {pluralize(opportunities.length)}
+          </span>
+          {opportunities.length === 0 && (
+            <Link href="/register" className="ml-2 font-medium text-emerald-600 hover:underline">
+              Организация? Разместите свою заявку
+            </Link>
+          )}
+        </div>
+        <BelarusMap
+          cities={cityMarkers}
+          activeCity={city}
+          activeCategory={category}
+          activeQuery={query}
+          totalCount={allOpportunities.length}
+        />
       </div>
 
       {opportunities.length === 0 ? (

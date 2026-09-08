@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LogoMark from "@/components/LogoMark";
 
 export default function Footer() {
   return (
@@ -7,9 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           <div className="col-span-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white">
-                ВБ
-              </span>
+              <LogoMark className="h-8 w-8 rounded-lg" glyphClassName="h-6 w-6" />
               <span className="text-sm font-bold text-gray-900">
                 Волонтёры Беларуси
               </span>
