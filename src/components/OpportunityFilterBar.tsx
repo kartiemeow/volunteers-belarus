@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_ORDER, CATEGORY_SHORT } from "@/lib/constants";
 import { IconSearch } from "@/components/icons";
@@ -17,7 +17,6 @@ export function OpportunityFilterBar({
   query?: string;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
   const [q, setQ] = useState(query);
 
   function apply(params: Record<string, string | undefined>) {
@@ -28,7 +27,7 @@ export function OpportunityFilterBar({
     if (category) sp.set("category", category);
     if (city) sp.set("city", city);
     if (sQuery) sp.set("q", sQuery);
-    startTransition(() => router.push(`/zayavki${sp.size ? `?${sp.toString()}` : ""}`));
+    router.push(`/zayavki${sp.size ? `?${sp.toString()}` : ""}`);
   }
 
   return (

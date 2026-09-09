@@ -60,6 +60,23 @@ export function Input({
   );
 }
 
+const PHONE_MASK = "+375 29 1234567";
+
+function formatPhone(raw: string): string {
+  let digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("80")) digits = digits.slice(2);
+  else if (digits.startsWith("0")) digits = digits.slice(1);
+  else if (digits.startsWith("375")) digits = digits.slice(3);
+  digits = digits.slice(0, 9);
+  let out = "+375";
+  if (digits) {
+    out += " " + digits.slice(0, 2);
+    if (digits.length > 2) out += " " + digits.slice(2);
+  }
+  return out;
+}
+
 export function PhoneInput({
   label,
   name = "phone",
@@ -71,38 +88,52 @@ export function PhoneInput({
   required?: boolean;
   defaultValue?: string;
 }) {
-  const format = (raw: string): string => {
-    let digits = raw.replace(/\D/g, "").slice(0, 12);
-    if (!digits) return "";
-    if (digits.startsWith("80")) {
-      digits = "375" + digits.slice(2);
-    } else if (digits.startsWith("0")) {
-      digits = "375" + digits.slice(1);
-    }
-    let out = digits.slice(0, 3);
-    if (digits.length > 3) out += " " + digits.slice(3, 5);
-    if (digits.length > 5) out += " " + digits.slice(5);
-    return "+" + out;
-  };
+  const [value, setValue] = useState(() =>
+    defaultValue ? formatPhone(defaultValue) : "",
+  );
+
+  const needsOverlay = value === "" || PHONE_MASK.startsWith(value);
 
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-gray-700">
         {label}
       </span>
-      <input
-        type="tel"
-        name={name}
-        required={required}
-        inputMode="tel"
-        autoComplete="tel-national"
-        defaultValue={defaultValue ? format(defaultValue) : ""}
-        onInput={(e) => {
-          e.currentTarget.value = format(e.currentTarget.value);
-        }}
-        placeholder="+375 29 1234567"
-        className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-      />
+      <div className="relative">
+        <input
+          type="tel"
+          name={name}
+          required={required}
+          inputMode="tel"
+          autoComplete="tel-national"
+          value={value}
+          onFocus={() => {
+            if (value === "") setValue("+375 ");
+          }}
+          onInput={(e) => setValue(formatPhone(e.currentTarget.value))}
+          className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        />
+        {needsOverlay && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-sm"
+          >
+            {value === "" ? (
+              <>
+                <span className="text-gray-500">+375</span>
+                <span className="text-gray-300"> 29 1234567</span>
+              </>
+            ) : (
+              <>
+                <span className="opacity-0">{value}</span>
+                <span className="text-gray-300">
+                  {PHONE_MASK.slice(value.length)}
+                </span>
+              </>
+            )}
+          </span>
+        )}
+      </div>
     </label>
   );
 }

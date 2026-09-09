@@ -192,12 +192,12 @@ export default async function HomePage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}
+                      className={`inline-block rounded-full px-3 py-1 text-center text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}
                     >
                       {CATEGORY_LABELS[o.category]}
                     </span>
                     <span
-                      className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${OPPORTUNITY_STATUS_COLORS[o.status]}`}
+                      className={`inline-block rounded-full px-2.5 py-1 text-center text-xs font-medium ${OPPORTUNITY_STATUS_COLORS[o.status]}`}
                     >
                       {OPPORTUNITY_STATUS_LABELS[o.status]}
                     </span>

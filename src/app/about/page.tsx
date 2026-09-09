@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { auth } from "@/lib/auth";
 import {
   IconHandshake,
   IconShield,
@@ -36,7 +37,15 @@ const VALUES = [
   },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const session = await auth();
+  const user = session?.user;
+  const roleHome =
+    user?.role === "ORGANIZER"
+      ? "/organizer"
+      : user?.role === "ADMIN"
+        ? "/admin"
+        : "/volunteer";
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <div className="text-center">
@@ -81,21 +90,52 @@ export default function AboutPage() {
         ))}
       </div>
 
-      <div className="mt-12 rounded-2xl bg-gray-50 p-8 text-center">
-        <h2 className="text-xl font-bold text-gray-900">Присоединяйтесь</h2>
-        <p className="mx-auto mt-2 max-w-xl text-gray-600">
-          Если вы волонтёр, организация или просто хотите стать частью
-          сообщества, начните с регистрации.
-        </p>
-        <div className="mt-5">
-          <Link
-            href="/register"
-            className="inline-block rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-          >
-            Зарегистрироваться
-          </Link>
+      {user ? (
+        <div className="mt-12 rounded-2xl bg-gray-50 p-8 text-center">
+          <h2 className="text-xl font-bold text-gray-900">Вы уже в сообществе</h2>
+          <p className="mx-auto mt-2 max-w-xl text-gray-600">
+            Находите заявки рядом с вами или вернитесь в личный кабинет.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/zayavki"
+              className="inline-block rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Найти заявку
+            </Link>
+            <Link
+              href={roleHome}
+              className="inline-block rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:border-emerald-400 hover:bg-emerald-50"
+            >
+              Личный кабинет
+            </Link>
+            {user.role === "ORGANIZER" && (
+              <Link
+                href="/organizer/create"
+                className="inline-block rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:border-emerald-400 hover:bg-emerald-50"
+              >
+                Создать заявку
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-12 rounded-2xl bg-gray-50 p-8 text-center">
+          <h2 className="text-xl font-bold text-gray-900">Присоединяйтесь</h2>
+          <p className="mx-auto mt-2 max-w-xl text-gray-600">
+            Если вы волонтёр, организация или просто хотите стать частью
+            сообщества, начните с регистрации.
+          </p>
+          <div className="mt-5">
+            <Link
+              href="/register"
+              className="inline-block rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Зарегистрироваться
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

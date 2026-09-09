@@ -87,7 +87,7 @@ export default async function ManageOpportunityPage(
           >
             Публичная страница
           </a>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
+          <span className={`rounded-full px-3 py-1 text-center text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
             {OPPORTUNITY_STATUS_LABELS[opportunity.status]}
           </span>
         </div>

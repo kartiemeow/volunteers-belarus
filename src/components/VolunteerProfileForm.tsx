@@ -134,13 +134,15 @@ export function VolunteerProfileForm({
         ))}
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60 sm:w-auto sm:px-8"
-      >
-        {pending ? "Сохраняем..." : "Сохранить"}
-      </button>
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60 sm:w-auto sm:px-8"
+        >
+          {pending ? "Сохраняем..." : "Сохранить"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -121,10 +121,10 @@ export default async function OpportunitiesPage(
               className="group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}>
+                <span className={`inline-block rounded-full px-3 py-1 text-center text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}>
                   {CATEGORY_SHORT[o.category]}
                 </span>
-                <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${OPPORTUNITY_STATUS_COLORS[o.status]}`}>
+                <span className={`inline-block rounded-full px-2.5 py-1 text-center text-xs font-medium ${OPPORTUNITY_STATUS_COLORS[o.status]}`}>
                   {OPPORTUNITY_STATUS_LABELS[o.status]}
                 </span>
               </div>

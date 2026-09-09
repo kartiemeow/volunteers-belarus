@@ -185,7 +185,7 @@ export default async function VolunteerDashboardPage({
                       {a.opportunity.title}
                     </Link>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[a.opportunity.category]}`}>
+                      <span className={`rounded-full px-2.5 py-0.5 text-center text-xs font-semibold ${CATEGORY_COLORS[a.opportunity.category]}`}>
                         {CATEGORY_SHORT[a.opportunity.category]}
                       </span>
                       <span className="flex items-center gap-1">

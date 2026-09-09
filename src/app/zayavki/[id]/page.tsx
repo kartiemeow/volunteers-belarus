@@ -91,10 +91,10 @@ export default async function OpportunityPage(
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${CATEGORY_COLORS[opportunity.category]}`}>
+              <span className={`inline-block rounded-full px-3 py-1 text-center text-xs font-semibold ${CATEGORY_COLORS[opportunity.category]}`}>
                 {CATEGORY_LABELS[opportunity.category]}
               </span>
-              <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
+              <span className={`inline-block rounded-full px-3 py-1 text-center text-xs font-medium ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
                 {OPPORTUNITY_STATUS_LABELS[opportunity.status]}
               </span>
             </div>

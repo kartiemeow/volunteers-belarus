@@ -224,7 +224,7 @@ export default async function OrganizerDashboardPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-center text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}>
                       {CATEGORY_SHORT[o.category]}
                     </span>
                   </td>
@@ -238,7 +238,7 @@ export default async function OrganizerDashboardPage() {
                     )}
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[o.status]}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-center text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[o.status]}`}>
                       {OPPORTUNITY_STATUS_LABELS[o.status]}
                     </span>
                   </td>
@@ -268,12 +268,12 @@ export default async function OrganizerDashboardPage() {
                     {formatDate(o.date)}
                   </div>
                 </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[o.status]}`}>
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-center text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[o.status]}`}>
                   {OPPORTUNITY_STATUS_LABELS[o.status]}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}>
+                <span className={`rounded-full px-2.5 py-0.5 text-center text-xs font-semibold ${CATEGORY_COLORS[o.category]}`}>
                   {CATEGORY_SHORT[o.category]}
                 </span>
                 <span>{o.city}</span>
