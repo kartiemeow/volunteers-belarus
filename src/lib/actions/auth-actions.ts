@@ -2,18 +2,18 @@
 
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { AuthError } from "next-auth";
 
+import { completeRegistration } from "@/lib/registration-service";
 import { db } from "@/lib/db";
 import { auth, signIn } from "@/lib/auth";
 import type { Role } from "@/generated/prisma/client";
 import {
   CODE_TTL_MS,
-  MAX_ATTEMPTS,
   RESEND_COOLDOWN_MS,
-  codesEqual,
   generateVerificationCode,
   hashVerificationCode,
   sendVerificationEmail,
@@ -128,66 +128,14 @@ export async function verifyEmailAction(
     return { error: "Введите код из письма" };
   }
 
-  const verification = await db.emailVerification.findUnique({ where: { email } });
-  if (!verification) {
-    return { error: "Регистрация не найдена. Зарегистрируйтесь заново." };
-  }
-  if (Date.now() > verification.expiresAt.getTime()) {
-    return { error: "Срок действия кода истёк. Запросите новый код." };
-  }
-  if (verification.attempts >= MAX_ATTEMPTS) {
-    return { error: "Слишком много неудачных попыток. Запросите новый код." };
-  }
+  const result = await completeRegistration(email, code).catch((error: unknown) => {
+    if ((error as { code?: string }).code === "P2002") return { error: "Пользователь с таким email уже зарегистрирован" };
+    throw error;
+  });
+  if ("error" in result) return { error: result.error };
 
-  if (!codesEqual(verification.codeHash, hashVerificationCode(code))) {
-    await db.emailVerification.update({
-      where: { email },
-      data: { attempts: { increment: 1 } },
-    });
-    const left = MAX_ATTEMPTS - (verification.attempts + 1);
-    return {
-      error:
-        left > 0
-          ? `Неверный код. Осталось попыток: ${left}.`
-          : "Слишком много неудачных попыток. Запросите новый код.",
-    };
-  }
-
-  let userId: string;
-  try {
-    const user = await db.user.create({
-      data: {
-        name: verification.name,
-        email,
-        password: verification.passwordHash,
-        role: verification.role,
-        phone: verification.phone,
-        city: verification.city,
-        emailVerified: new Date(),
-      },
-    });
-    userId = user.id;
-  } catch (err) {
-    const prismaErr = err as { code?: string };
-    if (prismaErr.code === "P2002") {
-      return { error: "Пользователь с таким email уже зарегистрирован" };
-    }
-    throw err;
-  }
-
-  if (verification.role === "VOLUNTEER") {
-    await db.volunteerProfile.create({ data: { userId } });
-  } else {
-    await db.organizationProfile.create({
-      data: {
-        userId,
-        orgName: verification.name,
-      },
-    });
-  }
-
-  await db.emailVerification.delete({ where: { email } });
-
+  updateTag("statistics");
+  updateTag("organizations");
   redirect(`/login?verified=${encodeURIComponent(email)}`);
 }
 

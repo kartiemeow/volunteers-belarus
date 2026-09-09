@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { db } from "@/lib/db";
+import { getNews } from "@/lib/public-news";
+import { Pagination } from "@/components/Pagination";
+import { pageNumber } from "@/lib/pagination";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Новости",
@@ -11,12 +12,10 @@ export const metadata: Metadata = {
     "Новости волонтёрского движения Беларуси: отчёты, события и истории волонтёров.",
 };
 
-export default async function NovostiPage() {
-  const posts = await db.newsPost.findMany({
-    where: { published: true },
-    orderBy: { createdAt: "desc" },
-    include: { author: { select: { name: true } } },
-  });
+export default async function NovostiPage(props: PageProps<"/novosti">) {
+  const params = await props.searchParams;
+  const page = pageNumber(params.page);
+  const { posts, total } = await getNews(page);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -45,7 +44,7 @@ export default async function NovostiPage() {
                 className="rounded-2xl border border-gray-200 bg-white p-7"
               >
                 <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <time dateTime={post.createdAt.toISOString()}>
+                  <time dateTime={new Date(post.createdAt).toISOString()}>
                     {formatDate(post.createdAt)}
                   </time>
                 </div>
@@ -63,6 +62,7 @@ export default async function NovostiPage() {
           </div>
         )}
       </div>
+      <Pagination pathname="/novosti" params={params} page={page} total={total} />
     </div>
   );
 }
@@ -72,5 +72,5 @@ function formatDate(d: Date) {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(d);
+  }).format(new Date(d));
 }

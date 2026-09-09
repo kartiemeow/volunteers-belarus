@@ -1,3 +1,6 @@
+import type { ApplicationStatus } from "@/generated/prisma/client";
+import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -7,7 +10,7 @@ import {
   confirmParticipation,
   declineParticipation,
 } from "@/lib/actions/application-actions";
-import { getVolunteerReliability } from "@/lib/reliability";
+import { reliabilityFromCounts } from "@/lib/reliability";
 import { CATEGORY_COLORS, CATEGORY_SHORT, STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
 import { IconAlert, IconMapPin, IconStar } from "@/components/icons";
 
@@ -27,50 +30,29 @@ export default async function VolunteerDashboardPage({
   if (!session?.user) redirect("/login?next=/volunteer");
   if (session.user.role !== "VOLUNTEER") redirect("/organizer");
 
-  const { tab } = await searchParams;
+  const params = await searchParams;
+  const { tab } = params;
+  const page = pageNumber(params.page);
   const activeTab = TABS.some((t) => t.key === tab) ? tab : "vse";
 
   const profile = await db.volunteerProfile.findUnique({
     where: { userId: session.user.id },
   });
 
-  const [applications, ratings] = await Promise.all([
-    db.application.findMany({
-      where: { volunteerId: profile?.id ?? "" },
-      orderBy: { createdAt: "desc" },
-      include: {
-        opportunity: {
-          include: { organizer: { include: { user: true } } },
-        },
-      },
-    }),
-    db.rating.findMany({
-      where: { volunteerId: profile?.id ?? "" },
-      select: { applicationId: true },
-    }),
+  const volunteerId = profile?.id ?? "";
+  const statuses: ApplicationStatus[] | undefined = activeTab === "aktivnye" ? ["PENDING", "APPROVED"]
+    : activeTab === "vypolnennye" ? ["DONE"] : activeTab === "ne-yavilsya" ? ["NO_SHOW"] : undefined;
+  const where = { volunteerId, ...(statuses ? { status: { in: statuses } } : {}) };
+  const [filtered, groups, total] = await Promise.all([
+    db.application.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE,
+      include: { rating: { select: { id: true } }, opportunity: { include: { organizer: { select: { user: { select: { name: true } } } } } } } }),
+    db.application.groupBy({ by: ["status"], where: { volunteerId }, _count: true, _sum: { hoursLogged: true } }),
+    db.application.count({ where }),
   ]);
-
-  const ratedApps = new Set(ratings.map((r) => r.applicationId));
-
-  const reliability = getVolunteerReliability(applications);
-
-  const counts = {
-    total: applications.length,
-    pending: applications.filter((a) => a.status === "PENDING").length,
-    approved: applications.filter((a) => a.status === "APPROVED").length,
-    done: applications.filter((a) => a.status === "DONE").length,
-    hours: applications
-      .filter((a) => a.status === "DONE")
-      .reduce((sum, a) => sum + a.hoursLogged, 0),
-  };
-
-  const filtered = applications.filter((a) => {
-    if (activeTab === "aktivnye")
-      return a.status === "PENDING" || a.status === "APPROVED";
-    if (activeTab === "vypolnennye") return a.status === "DONE";
-    if (activeTab === "ne-yavilsya") return a.status === "NO_SHOW";
-    return true;
-  });
+  const count = (status: ApplicationStatus) => groups.find((group) => group.status === status)?._count ?? 0;
+  const reliability = reliabilityFromCounts(count("DONE"), count("NO_SHOW"));
+  const counts = { total: groups.reduce((sum, group) => sum + group._count, 0), pending: count("PENDING"), approved: count("APPROVED"),
+    done: count("DONE"), hours: groups.find((group) => group.status === "DONE")?._sum.hoursLogged ?? 0 };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -170,7 +152,7 @@ export default async function VolunteerDashboardPage({
       ) : (
         <div className="mt-4 space-y-4">
           {filtered.map((a) => {
-            const couldRate = a.status === "DONE" && !ratedApps.has(a.id);
+            const couldRate = a.status === "DONE" && !a.rating;
             return (
               <div
                 key={a.id}
@@ -251,7 +233,7 @@ export default async function VolunteerDashboardPage({
                       Оценить организацию
                     </Link>
                   )}
-                  {a.status === "DONE" && ratedApps.has(a.id) && (
+                  {a.status === "DONE" && a.rating && (
                     <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
                       <IconStar className="h-4 w-4 text-amber-500" />
                       Вы оценили организацию. Спасибо!
@@ -286,6 +268,7 @@ export default async function VolunteerDashboardPage({
           })}
         </div>
       )}
+      <Pagination pathname="/volunteer" params={params} page={page} total={total} />
     </div>
   );
 }

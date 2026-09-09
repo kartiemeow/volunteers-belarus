@@ -76,7 +76,6 @@ model EmailVerification {
   phone        String?
   city         String?
 
-  @@index([email])
 }
 
 model VolunteerProfile {
@@ -131,6 +130,10 @@ model Opportunity {
   organizer    OrganizationProfile @relation(fields: [organizerId], references: [id], onDelete: Cascade)
 
   applications Application[]
+  @@index([organizerId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([createdAt, id])
+
 }
 
 model Application {
@@ -151,6 +154,8 @@ model Application {
   rating         Rating?
 
   @@unique([opportunityId, volunteerId])
+  @@index([volunteerId, status, createdAt, id])
+
 }
 
 model NewsPost {
@@ -165,6 +170,8 @@ model NewsPost {
 
   authorId String
   author   User     @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([published, createdAt, id])
+
 }
 
 model Rating {
@@ -181,6 +188,9 @@ model Rating {
 
   applicationId  String               @unique
   application    Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([organizationId])
+  @@index([volunteerId])
+
 }
 
 model Notification {
@@ -194,4 +204,7 @@ model Notification {
 
   userId String
   user   User   @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt, id])
+  @@index([userId, read])
+
 }

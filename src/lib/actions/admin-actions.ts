@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
@@ -17,6 +17,10 @@ export async function verifyOrganization(formData: FormData) {
     data: { verified },
   });
 
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
+  updateTag("news");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
@@ -35,6 +39,10 @@ export async function setOpportunityStatus(formData: FormData) {
     data: { status: status as "OPEN" | "CLOSED" | "COMPLETED" },
   });
 
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
+  updateTag("news");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
@@ -51,6 +59,10 @@ export async function deleteUser(formData: FormData) {
 
   await db.user.delete({ where: { id: userId } });
 
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
+  updateTag("news");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }
@@ -70,6 +82,10 @@ export async function deleteOrganization(formData: FormData) {
 
   await db.user.delete({ where: { id: org.userId } });
 
+  updateTag("opportunities");
+  updateTag("organizations");
+  updateTag("statistics");
+  updateTag("news");
   revalidatePath("/admin");
   revalidatePath("/zayavki");
 }

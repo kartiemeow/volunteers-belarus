@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,60 +14,35 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const NOW = Date.now();
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export default async function OrganizerDashboardPage() {
+export default async function OrganizerDashboardPage(props: PageProps<"/organizer">) {
+  // eslint-disable-next-line react-hooks/purity -- Dynamic Server Component needs the time of this request.
+  const now = Date.now();
   const session = await auth();
   if (!session?.user) redirect("/login?next=/organizer");
   if (session.user.role !== "ORGANIZER") redirect("/volunteer");
 
-  const [orgProfile, opportunities] = await Promise.all([
+  const params = await props.searchParams;
+  const page = pageNumber(params.page);
+  const attendancePage = pageNumber(params.attendancePage);
+  const own = { organizer: { userId: session.user.id } };
+  const attendanceWhere = { ...own, date: { lte: new Date(now) }, applications: { some: { status: "APPROVED" as const } } };
+  const [orgProfile, opportunityRows, attendance, opportunityCount, totalApplications, pendingApplications, totalAttendance, overdueAttendance, attendanceCount] = await Promise.all([
     db.organizationProfile.findUnique({ where: { userId: session.user.id } }),
-    db.opportunity.findMany({
-      where: { organizer: { userId: session.user.id } },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { applications: true } },
-        applications: {
-          where: { status: "PENDING" },
-          select: { id: true },
-        },
-      },
-    }),
+    db.opportunity.findMany({ where: own, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE,
+      include: { _count: { select: { applications: true } } } }),
+    db.opportunity.findMany({ where: attendanceWhere, orderBy: [{ date: "asc" }, { id: "asc" }], take: PAGE_SIZE, skip: (attendancePage - 1) * PAGE_SIZE,
+      select: { id: true, title: true, city: true, date: true, _count: { select: { applications: { where: { status: "APPROVED" } } } } } }),
+    db.opportunity.count({ where: own }),
+    db.application.count({ where: { opportunity: own } }),
+    db.application.count({ where: { opportunity: own, status: "PENDING" } }),
+    db.application.count({ where: { opportunity: { ...own, date: { lte: new Date(now) } }, status: "APPROVED" } }),
+    db.opportunity.count({ where: { ...attendanceWhere, date: { lt: new Date(now - 3 * DAY_MS) } } }),
+    db.opportunity.count({ where: attendanceWhere }),
   ]);
-
-  const attendance = await db.opportunity.findMany({
-    where: {
-      organizer: { userId: session.user.id },
-      date: { lte: new Date() },
-      applications: { some: { status: "APPROVED" } },
-    },
-    include: {
-      applications: {
-        where: { status: "APPROVED" },
-        select: { id: true },
-      },
-    },
-    orderBy: { date: "asc" },
-  });
-
-  const totalAttendance = attendance.reduce(
-    (sum, o) => sum + o.applications.length,
-    0
-  );
-  const overdueAttendance = attendance.filter(
-    (o) => o.date.getTime() + 3 * DAY_MS < NOW
-  ).length;
-
-  const totalApplications = opportunities.reduce(
-    (sum, o) => sum + o._count.applications,
-    0
-  );
-  const pendingApplications = opportunities.reduce(
-    (sum, o) => sum + o.applications.length,
-    0
-  );
+  const pendingGroups = await db.application.groupBy({ by: ["opportunityId"], where: { opportunityId: { in: opportunityRows.map((o) => o.id) }, status: "PENDING" }, _count: true });
+  const opportunities = opportunityRows.map((o) => ({ ...o, pendingCount: pendingGroups.find((group) => group.opportunityId === o.id)?._count ?? 0 }));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -127,7 +104,7 @@ export default async function OrganizerDashboardPage() {
       {/* Stats */}
       <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3">
         {[
-          { value: opportunities.length, label: "Заявок размещено" },
+          { value: opportunityCount, label: "Заявок размещено" },
           { value: totalApplications, label: "Всего откликов" },
           { value: pendingApplications, label: "Ждут вашего решения" },
         ].map((s) => (
@@ -145,7 +122,7 @@ export default async function OrganizerDashboardPage() {
           </h2>
           <div className="space-y-3">
             {attendance.map((o) => {
-              const isOverdue = o.date.getTime() + 3 * DAY_MS < NOW;
+              const isOverdue = o.date.getTime() + 3 * DAY_MS < now;
               const deadline = new Date(
                 o.date.getTime() + 3 * 24 * 60 * 60 * 1000
               );
@@ -160,7 +137,7 @@ export default async function OrganizerDashboardPage() {
                     <div className="font-semibold text-gray-900">{o.title}</div>
                     <div className="text-sm text-gray-500">
                       {formatDate(o.date)}, {o.city}, явку нужно отметить{" "}
-                      {o.applications.length} волонтёрам
+                      {o._count.applications} волонтёрам
                     </div>
                   </div>
                   <Link
@@ -182,6 +159,7 @@ export default async function OrganizerDashboardPage() {
         </div>
       )}
 
+      <Pagination pathname="/organizer" params={params} page={attendancePage} total={attendanceCount} pageKey="attendancePage" />
       {/* Opportunities */}
       <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900">Мои заявки</h2>
 
@@ -231,9 +209,9 @@ export default async function OrganizerDashboardPage() {
                   <td className="px-5 py-4 text-sm text-gray-600">{o.city}</td>
                   <td className="px-5 py-4 text-sm text-gray-600">
                     {o._count.applications}
-                    {o.applications.length > 0 && (
+                    {o.pendingCount > 0 && (
                       <span className="ml-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
-                        {o.applications.length} новых
+                        {o.pendingCount} новых
                       </span>
                     )}
                   </td>
@@ -278,9 +256,9 @@ export default async function OrganizerDashboardPage() {
                 </span>
                 <span>{o.city}</span>
                 <span>откликов: {o._count.applications}</span>
-                {o.applications.length > 0 && (
+                {o.pendingCount > 0 && (
                   <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
-                    {o.applications.length} новых
+                    {o.pendingCount} новых
                   </span>
                 )}
               </div>
@@ -297,6 +275,7 @@ export default async function OrganizerDashboardPage() {
         </div>
         </>
       )}
+      <Pagination pathname="/organizer" params={params} page={page} total={opportunityCount} />
     </div>
   );
 }

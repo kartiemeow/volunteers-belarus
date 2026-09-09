@@ -2,17 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-import { db } from "@/lib/db";
+import { getNewsPost } from "@/lib/public-news";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata(
   props: PageProps<"/novosti/[slug]">
 ): Promise<Metadata> {
   const { slug } = await props.params;
-  const post = await db.newsPost.findFirst({
-    where: { slug, published: true },
-  });
+  const post = await getNewsPost(slug);
   if (!post) return { title: "Новость не найдена" };
   return { title: post.title, description: post.excerpt };
 }
@@ -21,10 +18,7 @@ export default async function NewsPostPage(
   props: PageProps<"/novosti/[slug]">
 ) {
   const { slug } = await props.params;
-  const post = await db.newsPost.findFirst({
-    where: { slug, published: true },
-    include: { author: { select: { name: true } } },
-  });
+  const post = await getNewsPost(slug);
   if (!post) notFound();
 
   return (
@@ -37,7 +31,7 @@ export default async function NewsPostPage(
       </Link>
 
       <div className="mt-6 flex items-center gap-2 text-sm text-gray-400">
-        <time dateTime={post.createdAt.toISOString()}>
+        <time dateTime={new Date(post.createdAt).toISOString()}>
           {formatDate(post.createdAt)}
         </time>
       </div>
@@ -68,5 +62,5 @@ function formatDate(d: Date) {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(d);
+  }).format(new Date(d));
 }

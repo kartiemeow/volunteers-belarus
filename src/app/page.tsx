@@ -1,7 +1,9 @@
 import Link from "next/link";
 import HeroTogether from "@/components/HeroTogether";
 import type { ComponentType } from "react";
-import { db } from "@/lib/db";
+import { OpportunityCardSkeleton } from "@/components/skeletons";
+import { Suspense } from "react";
+import { getHomeStats, getRecentOpportunities } from "@/lib/public-opportunities";
 import {
   CATEGORY_LABELS,
   CATEGORY_COLORS,
@@ -10,8 +12,6 @@ import {
   CATEGORY_ORDER,
 } from "@/lib/constants";
 import { IconPaw, IconOldMan, IconCompass, IconTree, IconMapPin } from "@/components/icons";
-
-export const dynamic = "force-dynamic";
 
 const DIRECTION_DESCRIPTIONS: Record<string, string> = {
   SHELTER:
@@ -31,27 +31,7 @@ const DIRECTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   URBAN: IconTree,
 };
 
-export default async function HomePage() {
-  const [recentOpportunities, stats] = await Promise.all([
-    db.opportunity.findMany({
-      where: { status: "OPEN" },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      include: { organizer: { include: { user: true } } },
-    }),
-    Promise.all([
-      db.user.count({ where: { role: "VOLUNTEER" } }),
-      db.opportunity.count(),
-      db.application.count({ where: { status: "APPROVED" } }),
-      db.organizationProfile.count(),
-    ]).then(([volunteers, opportunities, applications, organizations]) => ({
-      volunteers,
-      opportunities,
-      applications,
-      organizations,
-    })),
-  ]);
-
+export default function HomePage() {
   return (
     <div>
       {/* Hero */}
@@ -87,23 +67,7 @@ export default async function HomePage() {
       </section>
 
       {/* Stats */}
-      <section className="border-b border-gray-200 bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 py-10 sm:px-6 md:grid-cols-4">
-          {[
-            { value: stats.volunteers + "+", label: "волонтёров" },
-            { value: stats.opportunities, label: "заявок опубликовано" },
-            { value: stats.applications, label: "одобренных откликов" },
-            { value: stats.organizations, label: "организаций" },
-          ].map((s) => (
-            <div key={s.label} className="text-center md:text-left">
-              <div className="text-3xl font-extrabold text-emerald-600">
-                {s.value}
-              </div>
-              <div className="mt-1 text-sm text-gray-500">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-[225px] border-b border-gray-200 bg-white md:h-[141px]" aria-label="Загрузка статистики" />}><HomeStats /></Suspense>
 
       {/* Directions */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
@@ -171,6 +135,39 @@ export default async function HomePage() {
             </Link>
           </div>
 
+          <Suspense fallback={<div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <OpportunityCardSkeleton key={i} />)}</div>}><RecentOpportunities /></Suspense>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+async function HomeStats() {
+  const stats = await getHomeStats();
+  return (
+      <section className="border-b border-gray-200 bg-white">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 py-10 sm:px-6 md:grid-cols-4">
+          {[
+            { value: stats.volunteers + "+", label: "волонтёров" },
+            { value: stats.opportunities, label: "заявок опубликовано" },
+            { value: stats.applications, label: "одобренных откликов" },
+            { value: stats.organizations, label: "организаций" },
+          ].map((s) => (
+            <div key={s.label} className="text-center md:text-left">
+              <div className="text-3xl font-extrabold text-emerald-600">
+                {s.value}
+              </div>
+              <div className="mt-1 text-sm text-gray-500">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+  );
+}
+
+async function RecentOpportunities() {
+  const recentOpportunities = await getRecentOpportunities();
+  return (<>
           {recentOpportunities.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
               <p className="text-gray-500">
@@ -223,8 +220,5 @@ export default async function HomePage() {
               ))}
             </div>
           )}
-        </div>
-      </section>
-    </div>
-  );
+  </>);
 }

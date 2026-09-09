@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 
@@ -14,43 +16,51 @@ import {
   OPPORTUNITY_STATUS_LABELS,
   OPPORTUNITY_STATUS_COLORS,
 } from "@/lib/constants";
-import { getVolunteerReliability } from "@/lib/reliability";
+import { reliabilityFromCounts } from "@/lib/reliability";
 import { RescheduleOpportunityForm } from "@/components/RescheduleOpportunityForm";
 import { IconMapPin } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-const NOW = Date.now();
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default async function ManageOpportunityPage(
   props: PageProps<"/organizer/opportunities/[id]">
 ) {
+  // eslint-disable-next-line react-hooks/purity -- Dynamic Server Component needs the time of this request.
+  const now = Date.now();
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ORGANIZER") redirect("/volunteer");
 
   const { id } = await props.params;
+  const params = await props.searchParams;
+  const page = pageNumber(params.page);
   const opportunity = await db.opportunity.findFirst({
     where: { id, organizer: { userId: session.user.id } },
     include: {
+      _count: { select: { applications: true } },
       applications: {
         include: {
           volunteer: {
             include: {
-              user: true,
-              applications: {
-                where: { status: { in: ["DONE", "NO_SHOW"] } },
-                select: { status: true, createdAt: true },
-              },
+              user: { select: { name: true, email: true, phone: true } },
             },
           },
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE,
       },
     },
   });
   if (!opportunity) notFound();
+  const reliabilityGroups = await db.application.groupBy({
+    by: ["volunteerId", "status"], where: { volunteerId: { in: opportunity.applications.map((a) => a.volunteerId) }, status: { in: ["DONE", "NO_SHOW"] } }, _count: true,
+  });
+  const unreliable = new Set(opportunity.applications.filter((a) => {
+    const count = (status: string) => reliabilityGroups.find((group) => group.volunteerId === a.volunteerId && group.status === status)?._count ?? 0;
+    return reliabilityFromCounts(count("DONE"), count("NO_SHOW")).isUnreliable;
+  }).map((a) => a.volunteerId));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -81,12 +91,12 @@ export default async function ManageOpportunityPage(
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a
+          <Link
             href={`/zayavki/${opportunity.id}`}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Публичная страница
-          </a>
+          </Link>
           <span className={`rounded-full px-3 py-1 text-center text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
             {OPPORTUNITY_STATUS_LABELS[opportunity.status]}
           </span>
@@ -142,7 +152,7 @@ export default async function ManageOpportunityPage(
                       <span>, ⏱ {a.volunteer.totalHours} ч помощи</span>
                     )}
                   </div>
-                  {reliabilityOf(a.volunteer.applications).isUnreliable && (
+                  {unreliable.has(a.volunteerId) && (
                     <span className="mt-1.5 inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                       Ненадёжный
                     </span>
@@ -196,10 +206,10 @@ export default async function ManageOpportunityPage(
                 )}
 
                 {a.status === "APPROVED" &&
-                  (isPast(opportunity.date) ? (
+                  (isPast(opportunity.date, now) ? (
                     <>
                       <span className="text-sm text-gray-500">
-                        Отметьте явку волонтёра{overdue(opportunity.date) ? (
+                        Отметьте явку волонтёра{overdue(opportunity.date, now) ? (
                           <strong className="text-red-600">: срок истёк!</strong>
                         ) : (
                           <strong>: до {deadline(opportunity.date)}</strong>
@@ -261,6 +271,7 @@ export default async function ManageOpportunityPage(
           ))}
         </div>
       )}
+      <Pagination pathname={`/organizer/opportunities/${id}`} params={params} page={page} total={opportunity._count.applications} />
     </div>
   );
 }
@@ -280,12 +291,12 @@ function toDatetimeLocal(d: Date) {
   )}:${pad(d.getMinutes())}`;
 }
 
-function isPast(d: Date) {
-  return d.getTime() <= NOW;
+function isPast(d: Date, now: number) {
+  return d.getTime() <= now;
 }
 
-function overdue(d: Date) {
-  return d.getTime() + 3 * DAY_MS < NOW;
+function overdue(d: Date, now: number) {
+  return d.getTime() + 3 * DAY_MS < now;
 }
 
 function deadline(d: Date) {
@@ -293,12 +304,4 @@ function deadline(d: Date) {
     day: "numeric",
     month: "long",
   }).format(new Date(d.getTime() + 3 * DAY_MS));
-}
-
-function reliabilityOf(
-  apps: { status: string; createdAt: Date }[]
-) {
-  return getVolunteerReliability(
-    apps.map((a) => ({ status: a.status as "DONE" | "NO_SHOW", createdAt: a.createdAt }))
-  );
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
@@ -73,6 +73,7 @@ export async function submitRating(
     "/organizer"
   );
 
+  updateTag("organizations");
   revalidatePath(`/ocenit/${applicationId}`);
   revalidatePath("/volunteer");
   revalidatePath(`/zayavki/${application.opportunity.id}`);

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
@@ -55,6 +55,7 @@ export async function createNewsPost(
     },
   });
 
+  updateTag("news");
   revalidatePath("/novosti");
   revalidatePath("/admin/news");
   return { success: "Новость опубликована" };
@@ -69,6 +70,7 @@ export async function toggleNewsPublished(formData: FormData) {
 
   await db.newsPost.update({ where: { id }, data: { published } });
 
+  updateTag("news");
   revalidatePath("/novosti");
   revalidatePath("/admin/news");
 }
@@ -80,6 +82,7 @@ export async function deleteNewsPost(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   await db.newsPost.delete({ where: { id } });
 
+  updateTag("news");
   revalidatePath("/novosti");
   revalidatePath("/admin/news");
 }

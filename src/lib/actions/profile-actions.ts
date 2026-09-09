@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
@@ -68,6 +68,8 @@ export async function updateVolunteerProfile(
     },
   });
 
+  updateTag("opportunities");
+  updateTag("organizations");
   revalidatePath("/volunteer");
   revalidatePath("/volunteer/profile");
   return { success: "Профиль обновлён" };
@@ -122,6 +124,8 @@ export async function updateOrganizationProfile(
     data: { name: orgName },
   });
 
+  updateTag("opportunities");
+  updateTag("organizations");
   revalidatePath("/organizer");
   revalidatePath("/organizer/profile");
   return { success: "Профиль обновлён" };

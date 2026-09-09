@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { getOpportunity, getOrganizationRating } from "@/lib/public-opportunities";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -19,13 +21,12 @@ import {
 } from "@/components/ApplyButton";
 import { IconStar } from "@/components/icons";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata(
   props: PageProps<"/zayavki/[id]">
 ): Promise<Metadata> {
   const { id } = await props.params;
-  const opportunity = await db.opportunity.findUnique({ where: { id } });
+  const opportunity = await getOpportunity(id);
   if (!opportunity) return { title: "Заявка не найдена" };
   return { title: opportunity.title };
 }
@@ -34,49 +35,8 @@ export default async function OpportunityPage(
   props: PageProps<"/zayavki/[id]">
 ) {
   const { id } = await props.params;
-  const [opportunity, session, ratingAgg] = await Promise.all([
-    db.opportunity.findUnique({
-      where: { id },
-      include: { organizer: { include: { user: true } } },
-    }),
-    auth(),
-    db.rating.aggregate({
-      _avg: { score: true },
-      _count: true,
-      where: { organization: { opportunities: { some: { id } } } },
-    }),
-  ]);
-
+  const opportunity = await getOpportunity(id);
   if (!opportunity) notFound();
-
-  const user = session?.user;
-  const isOwner = user?.role === "ORGANIZER" && opportunity.organizer.userId === user.id;
-
-  let actionArea: React.ReactNode = null;
-  if (isOwner) {
-    actionArea = <OrganizerView />;
-  } else if (opportunity.status !== "OPEN" || opportunity.filledSlots >= opportunity.slots) {
-    actionArea = <NoSlots />;
-  } else if (!user) {
-    actionArea = <NeedLogin />;
-  } else if (user.role !== "VOLUNTEER") {
-    actionArea = <OrganizerView />;
-  } else {
-    const profile = await db.volunteerProfile.findUnique({
-      where: { userId: user.id },
-    });
-    const existing = profile
-      ? await db.application.findUnique({
-          where: {
-            opportunityId_volunteerId: {
-              opportunityId: opportunity.id,
-              volunteerId: profile.id,
-            },
-          },
-        })
-      : null;
-    actionArea = existing ? <AlreadyApplied /> : <ApplyButton opportunityId={opportunity.id} />;
-  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -181,15 +141,7 @@ export default async function OpportunityPage(
                     ✓ Проверенная организация
                   </div>
                 )}
-                {ratingAgg._count > 0 && (
-                  <div className="mt-0.5 flex items-center gap-1 text-sm font-medium text-amber-500">
-                    <IconStar className="h-4 w-4 fill-amber-500 text-amber-500" />
-                    {ratingAgg._avg.score?.toFixed(1) ?? "-"}{" "}
-                    <span className="text-xs font-normal text-gray-400">
-                      ({ratingAgg._count} оценок)
-                    </span>
-                  </div>
-                )}
+                <Suspense fallback={null}><OrganizationRating id={opportunity.organizerId} /></Suspense>
               </div>
             </div>
           </div>
@@ -198,7 +150,7 @@ export default async function OpportunityPage(
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
               Хотите помочь?
             </h2>
-            {actionArea}
+            <Suspense fallback={<p role="status">Проверяем возможность отклика…</p>}><ActionArea opportunity={opportunity} /></Suspense>
           </div>
         </div>
       </div>
@@ -211,5 +163,44 @@ function formatDate(d: Date) {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(d);
+  }).format(new Date(d));
+}
+async function OrganizationRating({ id }: { id: string }) {
+  const ratingAgg = await getOrganizationRating(id);
+  return (<>
+                {ratingAgg._count > 0 && (
+                  <div className="mt-0.5 flex items-center gap-1 text-sm font-medium text-amber-500">
+                    <IconStar className="h-4 w-4 fill-amber-500 text-amber-500" />
+                    {ratingAgg._avg.score?.toFixed(1) ?? "-"}{" "}
+                    <span className="text-xs font-normal text-gray-400">
+                      ({ratingAgg._count} оценок)
+                    </span>
+                  </div>
+                )}
+  </>);
+}
+
+async function ActionArea({ opportunity }: { opportunity: NonNullable<Awaited<ReturnType<typeof getOpportunity>>> }) {
+  const session = await auth();
+  const user = session?.user;
+  const isOwner = user?.role === "ORGANIZER" && opportunity.organizer.userId === user.id;
+
+  let actionArea: React.ReactNode = null;
+  if (isOwner) {
+    actionArea = <OrganizerView />;
+  } else if (opportunity.status !== "OPEN" || opportunity.filledSlots >= opportunity.slots) {
+    actionArea = <NoSlots />;
+  } else if (!user) {
+    actionArea = <NeedLogin />;
+  } else if (user.role !== "VOLUNTEER") {
+    actionArea = <OrganizerView />;
+  } else {
+    const existing = await db.application.findFirst({
+      where: { opportunityId: opportunity.id, volunteer: { userId: user.id } },
+      select: { id: true },
+    });
+    actionArea = existing ? <AlreadyApplied /> : <ApplyButton opportunityId={opportunity.id} />;
+  }
+
+  return actionArea;
 }
