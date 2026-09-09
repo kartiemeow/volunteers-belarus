@@ -204,9 +204,10 @@ async function RecentOpportunities() {
                   <h3 className="mt-4 text-lg font-bold text-gray-900 group-hover:text-emerald-700">
                     {o.title}
                   </h3>
-                  <p className="mt-2 line-clamp-2 flex-1 text-sm text-gray-600">
+                  <p className="mt-2 line-clamp-2 text-sm text-gray-600">
                     {o.description}
                   </p>
+                  <div className="mt-auto" />
                   <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
                     <span className="flex items-center gap-1 text-gray-500">
                       <IconMapPin className="h-4 w-4 text-emerald-600" />

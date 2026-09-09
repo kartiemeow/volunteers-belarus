@@ -103,10 +103,11 @@ export default async function OrganizationsPage(props: PageProps<"/organizacii">
                 </div>
               )}
 
-              <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-gray-600">
+              <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-gray-600">
                 {org.description || "Описание организация ещё не добавила."}
               </p>
 
+              <div className="mt-auto" />
               <dl className="mt-5 grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-4 text-center">
                 <div>
                   <dt className="text-lg font-bold text-gray-900">{openCount}</dt>
