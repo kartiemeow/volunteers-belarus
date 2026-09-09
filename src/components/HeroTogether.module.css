@@ -1,0 +1,146 @@
+.scene {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 350px);
+  aspect-ratio: 1;
+  justify-self: center;
+  color: #f0fff6;
+}
+
+.drawing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.connections path {
+  stroke: #d8ffeb;
+  stroke-opacity: 0.2;
+  stroke-width: 1.25;
+}
+
+.highlights path {
+  stroke: #effff6;
+  stroke-width: 1.7;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 450ms ease;
+  opacity: 0.9;
+}
+
+.highlights path[data-active="true"] {
+  stroke-dashoffset: 0;
+}
+
+.anchor {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 15%;
+  height: 15%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #eafff2;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.disc {
+  display: grid;
+  place-items: center;
+  width: 82%;
+  height: 82%;
+  border: 1px solid #d0fce773;
+  border-radius: 50%;
+  background: #008e67;
+  transition: background 220ms, border-color 220ms, color 220ms, box-shadow 220ms;
+}
+
+.icon {
+  width: 44%;
+  height: 44%;
+}
+
+.label {
+  position: absolute;
+  top: 104%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 140px;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  color: #dcfbed;
+}
+
+.anchor[data-active="true"] .disc {
+  background: #edfff4;
+  border-color: #edfff4;
+  color: #007d58;
+  box-shadow: 0 0 0 5px #b8ffd514;
+}
+
+.anchor[data-active="true"] .label {
+  color: white;
+}
+
+.anchor:focus-visible {
+  outline: 2px solid #edfff4;
+  outline-offset: 6px;
+}
+
+.caption,
+.hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.caption {
+  top: 86%;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #edfff5;
+}
+
+.hint {
+  top: 97%;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #dcfbed;
+}
+
+@media (min-width: 1024px) {
+  .scene {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .label {
+    font-size: 13px;
+  }
+
+  .caption {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlights path,
+  .disc {
+    transition: none;
+  }
+}
