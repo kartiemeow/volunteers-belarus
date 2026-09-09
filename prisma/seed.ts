@@ -8,6 +8,9 @@ const db = new PrismaClient({
 });
 
 async function main() {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production" || process.env.ALLOW_DEMO_SEED !== "true") {
+    throw new Error("Demo seed is disabled. Use ALLOW_DEMO_SEED=true only with a disposable development database.");
+  }
   const password = await bcrypt.hash("Volunteer-2026!", 10);
   const verifiedDate = new Date();
 
@@ -384,6 +387,13 @@ async function main() {
         excerpt: n.excerpt,
       },
     });
+  }
+
+  for (const opportunity of createdOpps) {
+    const filledSlots = await db.application.count({
+      where: { opportunityId: opportunity.id, status: { in: ["PENDING", "APPROVED"] } },
+    });
+    await db.opportunity.update({ where: { id: opportunity.id }, data: { filledSlots } });
   }
 
   // Recompute totalHours for all volunteers so counters are consistent.

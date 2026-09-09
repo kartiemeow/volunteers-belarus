@@ -47,7 +47,7 @@ export default function RootLayout({
 async function SiteHeader() {
   const session = await auth();
 
-  const { notifications, unreadCount } = session?.user
+const { notifications, unreadCount } = session?.user
     ? await getNotifications(session.user.id)
     : { notifications: [], unreadCount: 0 };
   return <Header session={session} notifications={notifications} unreadCount={unreadCount} />;

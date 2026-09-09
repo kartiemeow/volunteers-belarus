@@ -10,6 +10,9 @@ import {
   confirmParticipation,
   declineParticipation,
 } from "@/lib/actions/application-actions";
+import { ActionForm } from "@/components/ActionForm";
+import { OrganizerContact } from "@/components/OrganizerContact";
+import { formatEventDate as formatDate } from "@/lib/dates";
 import { reliabilityFromCounts } from "@/lib/reliability";
 import { CATEGORY_COLORS, CATEGORY_SHORT, STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
 import { IconAlert, IconMapPin, IconStar } from "@/components/icons";
@@ -45,7 +48,7 @@ export default async function VolunteerDashboardPage({
   const where = { volunteerId, ...(statuses ? { status: { in: statuses } } : {}) };
   const [filtered, groups, total] = await Promise.all([
     db.application.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE,
-      include: { rating: { select: { id: true } }, opportunity: { include: { organizer: { select: { user: { select: { name: true } } } } } } } }),
+      include: { rating: { select: { id: true } }, opportunity: { include: { organizer: { include: { user: { select: { name: true } } } } } } } }),
     db.application.groupBy({ by: ["status"], where: { volunteerId }, _count: true, _sum: { hoursLogged: true } }),
     db.application.count({ where }),
   ]);
@@ -177,7 +180,7 @@ export default async function VolunteerDashboardPage({
                       <span>{formatDate(a.opportunity.date)}, {a.opportunity.organizer.user.name}</span>
                     </div>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_COLORS[a.status]}`}>
+                  <span className={`rounded-full px-3 py-1 text-center text-xs font-semibold ${STATUS_COLORS[a.status]}`}>
                     {STATUS_LABELS[a.status]}
                   </span>
                 </div>
@@ -209,6 +212,8 @@ export default async function VolunteerDashboardPage({
                   </p>
                 )}
 
+                {a.status === "WITHDRAWN" && <p className="mt-3 text-sm text-gray-500">Участие отменено. Место освобождено без отметки о неявке.</p>}
+
                 {a.needsReconfirmation &&
                   (a.status === "PENDING" || a.status === "APPROVED") && (
                     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -217,13 +222,28 @@ export default async function VolunteerDashboardPage({
                       </p>
                       <p className="mt-0.5 text-sm text-amber-800">
                         Организация перенесла событие. Новая дата:{" "}
-                        <strong>{formatDateTime(a.opportunity.date)}</strong>.
+                        <strong>{formatDate(a.opportunity.date)}</strong>.
                         Подтвердите участие или откажитесь.
                       </p>
                     </div>
                   )}
 
+                {["APPROVED", "DONE", "NO_SHOW"].includes(a.status) && (
+                  <OrganizerContact contact={a.opportunity.contactInfo} address={a.opportunity.address} />
+                )}
+
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
+                  {(["PENDING", "APPROVED"].includes(a.status) && (a.needsReconfirmation || a.opportunity.date > new Date())) && (
+                        <ActionForm action={declineParticipation}>
+                          <input type="hidden" name="applicationId" value={a.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                          >
+                            Отказаться
+                          </button>
+                        </ActionForm>
+                  )}
                   {couldRate && (
                     <Link
                       href={`/ocenit/${a.id}`}
@@ -242,7 +262,8 @@ export default async function VolunteerDashboardPage({
                   {a.needsReconfirmation &&
                     (a.status === "PENDING" || a.status === "APPROVED") && (
                       <>
-                        <form action={confirmParticipation}>
+                        <ActionForm action={confirmParticipation}>
+                          <input type="hidden" name="eventDate" value={a.opportunity.date.toISOString()} />
                           <input type="hidden" name="applicationId" value={a.id} />
                           <button
                             type="submit"
@@ -250,16 +271,7 @@ export default async function VolunteerDashboardPage({
                           >
                             Подтверждаю участие
                           </button>
-                        </form>
-                        <form action={declineParticipation}>
-                          <input type="hidden" name="applicationId" value={a.id} />
-                          <button
-                            type="submit"
-                            className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
-                          >
-                            Отказаться
-                          </button>
-                        </form>
+                        </ActionForm>
                       </>
                     )}
                 </div>
@@ -271,21 +283,4 @@ export default async function VolunteerDashboardPage({
       <Pagination pathname="/volunteer" params={params} page={page} total={total} />
     </div>
   );
-}
-
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "short",
-  }).format(d);
-}
-
-function formatDateTime(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
 }

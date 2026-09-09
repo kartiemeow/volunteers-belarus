@@ -4,17 +4,14 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { CreateOpportunityForm } from "@/components/CreateOpportunityForm";
 
-const MIN_DATE = (() => {
-  const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-})();
+import { toEventInput } from "@/lib/dates";
 
 export default async function CreateOpportunityPage() {
   const session = await auth();
   if (!session?.user) redirect("/login?next=/organizer/create");
   if (session.user.role !== "ORGANIZER") redirect("/");
+
+  const minDate = toEventInput(new Date(new Date().getTime() + 60 * 1000));
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -36,7 +33,7 @@ export default async function CreateOpportunityPage() {
       </div>
 
       <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
-        <CreateOpportunityForm minDate={MIN_DATE} />
+        <CreateOpportunityForm minDate={minDate} />
       </div>
     </div>
   );

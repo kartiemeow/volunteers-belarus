@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { markAllNotificationsRead, refreshNotifications } from "@/lib/actions/notification-actions";
+import { formatEventDate } from "@/lib/dates";
+import { markAllNotificationsRead } from "@/lib/actions/notification-actions";
 
 export type BellNotification = {
   id: string;
@@ -14,7 +15,7 @@ export type BellNotification = {
 };
 
 export default function NotificationBell({
-  notifications: initialNotifications,
+  notifications,
   unreadCount,
 }: {
   notifications: BellNotification[];
@@ -22,34 +23,14 @@ export default function NotificationBell({
 }) {
   const [open, setOpen] = useState(false);
 
-  const [data, setData] = useState({ notifications: initialNotifications, unreadCount });
-  const [previousNotifications, setPreviousNotifications] = useState(initialNotifications);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
-  const request = useRef(0);
-  if (previousNotifications !== initialNotifications) {
-    setPreviousNotifications(initialNotifications);
-    setData({ notifications: initialNotifications, unreadCount });
-  }
-  const { notifications, unreadCount: unread } = data;
-  async function update(markRead = false) {
-    const version = ++request.current;
-    setPending(true);
-    setError(false);
-    try {
-      const next = await (markRead ? markAllNotificationsRead() : refreshNotifications());
-      if (version === request.current) setData(next);
-    } catch {
-      if (version === request.current) setError(true);
-    } finally {
-      if (version === request.current) setPending(false);
-    }
-  }
+  const unread = unreadCount;
 
   return (
-    <div className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
+    <div className="relative" onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+    }} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>
       <button
-        onClick={() => { setOpen(!open); if (!open) void update(); }}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Уведомления"
         className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -75,16 +56,15 @@ export default function NotificationBell({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-[340px] rounded-xl border border-gray-200 bg-white shadow-lg">
+        <div className="absolute right-0 top-12 w-[min(340px,calc(100vw-2rem))] rounded-xl border border-gray-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <span className="text-sm font-semibold text-gray-900">
               Уведомления
             </span>
             {unread > 0 && (
-              <form action={() => update(true)}>
+              <form action={markAllNotificationsRead}>
                 <button
                   type="submit"
-                  disabled={pending}
                   className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
                 >
                   Отметить всё прочитанным
@@ -93,8 +73,8 @@ export default function NotificationBell({
             )}
           </div>
 
-          {error && <p role="alert" className="px-4 py-2 text-sm text-red-700">Не удалось обновить уведомления. Попробуйте ещё раз.</p>}
-          <div aria-busy={pending} className="max-h-80 overflow-y-auto">
+          <Link href="/uvedomleniya" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm font-medium text-emerald-700 hover:underline">Все уведомления</Link>
+          <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-gray-500">
                 Пока нет уведомлений
@@ -103,7 +83,7 @@ export default function NotificationBell({
               notifications.map((n) => (
                 <Link
                   key={n.id}
-                  href={n.link ?? "#"}
+                  href={`/uvedomleniya?notification=${encodeURIComponent(n.id)}`}
                   onClick={() => setOpen(false)}
                   className={`block border-b border-gray-50 px-4 py-3 last:border-b-0 hover:bg-gray-50 ${
                     n.read ? "" : "bg-emerald-50/50"
@@ -117,6 +97,7 @@ export default function NotificationBell({
                       <p className="text-sm font-medium text-gray-900">
                         {n.title}
                       </p>
+                      <time className="mt-1 block text-xs text-gray-400" dateTime={n.createdAt}>{formatEventDate(n.createdAt)}</time>
                       {n.body && (
                         <p className="mt-0.5 text-xs leading-relaxed text-gray-500 line-clamp-2">
                           {n.body}

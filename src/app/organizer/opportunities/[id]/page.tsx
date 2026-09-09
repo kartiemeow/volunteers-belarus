@@ -1,10 +1,14 @@
-import { Pagination } from "@/components/Pagination";
-import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
+import { ActionForm } from "@/components/ActionForm";
+import { toggleOpportunityStatus } from "@/lib/actions/application-actions";
+import { toEventInput as toDatetimeLocal } from "@/lib/dates";
+import { formatEventDate as formatDate } from "@/lib/dates";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { Pagination } from "@/components/Pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import {
   setApplicationStatus,
   setApplicationHours,
@@ -16,7 +20,7 @@ import {
   OPPORTUNITY_STATUS_LABELS,
   OPPORTUNITY_STATUS_COLORS,
 } from "@/lib/constants";
-import { reliabilityFromCounts } from "@/lib/reliability";
+import { getVolunteerReliability } from "@/lib/reliability";
 import { RescheduleOpportunityForm } from "@/components/RescheduleOpportunityForm";
 import { IconMapPin } from "@/components/icons";
 
@@ -27,8 +31,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export default async function ManageOpportunityPage(
   props: PageProps<"/organizer/opportunities/[id]">
 ) {
-  // eslint-disable-next-line react-hooks/purity -- Dynamic Server Component needs the time of this request.
-  const now = Date.now();
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ORGANIZER") redirect("/volunteer");
@@ -39,28 +41,29 @@ export default async function ManageOpportunityPage(
   const opportunity = await db.opportunity.findFirst({
     where: { id, organizer: { userId: session.user.id } },
     include: {
-      _count: { select: { applications: true } },
       applications: {
         include: {
           volunteer: {
             include: {
-              user: { select: { name: true, email: true, phone: true } },
+              user: true,
+              applications: {
+                where: { status: { in: ["DONE", "NO_SHOW"] } },
+                select: { status: true, createdAt: true },
+              },
             },
           },
         },
-        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-        take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE,
+        orderBy: { createdAt: "asc" },
       },
     },
   });
   if (!opportunity) notFound();
-  const reliabilityGroups = await db.application.groupBy({
-    by: ["volunteerId", "status"], where: { volunteerId: { in: opportunity.applications.map((a) => a.volunteerId) }, status: { in: ["DONE", "NO_SHOW"] } }, _count: true,
-  });
-  const unreliable = new Set(opportunity.applications.filter((a) => {
-    const count = (status: string) => reliabilityGroups.find((group) => group.volunteerId === a.volunteerId && group.status === status)?._count ?? 0;
-    return reliabilityFromCounts(count("DONE"), count("NO_SHOW")).isUnreliable;
-  }).map((a) => a.volunteerId));
+
+  const total = opportunity.applications.length;
+  const applications = opportunity.applications.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -77,7 +80,7 @@ export default async function ManageOpportunityPage(
             {opportunity.title}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
+            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-center text-xs font-semibold text-gray-700">
               {CATEGORY_LABELS[opportunity.category]}
             </span>
             <span className="flex items-center gap-1">
@@ -91,12 +94,21 @@ export default async function ManageOpportunityPage(
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
+          <a
             href={`/zayavki/${opportunity.id}`}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Публичная страница
-          </Link>
+          </a>
+          {opportunity.status !== "COMPLETED" && (
+            <ActionForm action={toggleOpportunityStatus}>
+              <input type="hidden" name="id" value={opportunity.id} />
+              <input type="hidden" name="status" value={opportunity.status === "OPEN" ? "CLOSED" : "OPEN"} />
+              <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                {opportunity.status === "OPEN" ? "Закрыть набор" : "Открыть набор"}
+              </button>
+            </ActionForm>
+          )}
           <span className={`rounded-full px-3 py-1 text-center text-xs font-semibold ${OPPORTUNITY_STATUS_COLORS[opportunity.status]}`}>
             {OPPORTUNITY_STATUS_LABELS[opportunity.status]}
           </span>
@@ -133,7 +145,7 @@ export default async function ManageOpportunityPage(
         </div>
       ) : (
         <div className="space-y-4">
-          {opportunity.applications.map((a) => (
+          {applications.map((a) => (
             <div
               key={a.id}
               className="rounded-2xl border border-gray-200 bg-white p-6"
@@ -152,7 +164,7 @@ export default async function ManageOpportunityPage(
                       <span>, ⏱ {a.volunteer.totalHours} ч помощи</span>
                     )}
                   </div>
-                  {unreliable.has(a.volunteerId) && (
+                  {reliabilityOf(a.volunteer.applications).isUnreliable && (
                     <span className="mt-1.5 inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                       Ненадёжный
                     </span>
@@ -168,21 +180,23 @@ export default async function ManageOpportunityPage(
                     </p>
                   )}
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_COLORS[a.status]}`}>
-                  {STATUS_LABELS[a.status]}
-                </span>
-                {a.needsReconfirmation &&
-                  (a.status === "PENDING" || a.status === "APPROVED") && (
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                      Ожидает подтверждения
-                    </span>
-                  )}
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className={`rounded-full px-3 py-1 text-center text-xs font-semibold ${STATUS_COLORS[a.status]}`}>
+                    {STATUS_LABELS[a.status]}
+                  </span>
+                  {a.needsReconfirmation &&
+                    (a.status === "PENDING" || a.status === "APPROVED") && (
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-center text-xs font-semibold text-amber-800">
+                        Ожидает подтверждения
+                      </span>
+                    )}
+                </div>
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
                 {a.status === "PENDING" && (
                   <>
-                    <form action={setApplicationStatus}>
+                    <ActionForm action={setApplicationStatus}>
                       <input type="hidden" name="applicationId" value={a.id} />
                       <input type="hidden" name="status" value="APPROVED" />
                       <button
@@ -191,8 +205,8 @@ export default async function ManageOpportunityPage(
                       >
                         Одобрить
                       </button>
-                    </form>
-                    <form action={setApplicationStatus}>
+                    </ActionForm>
+                    <ActionForm action={setApplicationStatus}>
                       <input type="hidden" name="applicationId" value={a.id} />
                       <input type="hidden" name="status" value="REJECTED" />
                       <button
@@ -201,21 +215,21 @@ export default async function ManageOpportunityPage(
                       >
                         Отклонить
                       </button>
-                    </form>
+                    </ActionForm>
                   </>
                 )}
 
-                {a.status === "APPROVED" &&
-                  (isPast(opportunity.date, now) ? (
+                {a.status === "APPROVED" && !a.needsReconfirmation &&
+                  (isPast(opportunity.date) ? (
                     <>
                       <span className="text-sm text-gray-500">
-                        Отметьте явку волонтёра{overdue(opportunity.date, now) ? (
+                        Отметьте явку волонтёра{overdue(opportunity.date) ? (
                           <strong className="text-red-600">: срок истёк!</strong>
                         ) : (
                           <strong>: до {deadline(opportunity.date)}</strong>
                         )}
                       </span>
-                      <form action={setApplicationStatus}>
+                      <ActionForm action={setApplicationStatus}>
                         <input type="hidden" name="applicationId" value={a.id} />
                         <input type="hidden" name="status" value="DONE" />
                         <button
@@ -224,8 +238,8 @@ export default async function ManageOpportunityPage(
                         >
                           Явился
                         </button>
-                      </form>
-                      <form action={setApplicationStatus}>
+                      </ActionForm>
+                      <ActionForm action={setApplicationStatus}>
                         <input type="hidden" name="applicationId" value={a.id} />
                         <input type="hidden" name="status" value="NO_SHOW" />
                         <button
@@ -234,7 +248,7 @@ export default async function ManageOpportunityPage(
                         >
                           Не явился
                         </button>
-                      </form>
+                      </ActionForm>
                     </>
                   ) : (
                     <span className="text-sm text-gray-500">
@@ -243,7 +257,7 @@ export default async function ManageOpportunityPage(
                   ))}
 
                 {a.status === "DONE" && (
-                  <form action={setApplicationHours} className="flex items-center gap-2">
+                  <ActionForm action={setApplicationHours} className="flex items-center gap-2">
                     <input
                       type="hidden"
                       name="applicationId"
@@ -264,39 +278,29 @@ export default async function ManageOpportunityPage(
                     >
                       Сохранить
                     </button>
-                  </form>
+                  </ActionForm>
                 )}
               </div>
             </div>
           ))}
+          <Pagination
+            pathname={`/organizer/opportunities/${id}`}
+            params={params}
+            page={page}
+            total={total}
+          />
         </div>
       )}
-      <Pagination pathname={`/organizer/opportunities/${id}`} params={params} page={page} total={opportunity._count.applications} />
     </div>
   );
 }
 
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
+function isPast(d: Date) {
+  return d.getTime() <= Date.now();
 }
 
-function toDatetimeLocal(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
-
-function isPast(d: Date, now: number) {
-  return d.getTime() <= now;
-}
-
-function overdue(d: Date, now: number) {
-  return d.getTime() + 3 * DAY_MS < now;
+function overdue(d: Date) {
+  return d.getTime() + 3 * DAY_MS < Date.now();
 }
 
 function deadline(d: Date) {
@@ -304,4 +308,12 @@ function deadline(d: Date) {
     day: "numeric",
     month: "long",
   }).format(new Date(d.getTime() + 3 * DAY_MS));
+}
+
+function reliabilityOf(
+  apps: { status: string; createdAt: Date }[]
+) {
+  return getVolunteerReliability(
+    apps.map((a) => ({ status: a.status as "DONE" | "NO_SHOW", createdAt: a.createdAt }))
+  );
 }

@@ -8,8 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
+    "test": "tsx --test tests/*.test.ts",
     "test:db": "tsx --test tests/database.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:integration": "tsx --test tests/integration/*.test.mts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

@@ -24,6 +24,7 @@ enum ApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+  WITHDRAWN // волонтёр отменил участие
   DONE // волонтёр явился и выполнил заявку
   NO_SHOW // волонтёр записался, но не явился
 }
@@ -130,10 +131,11 @@ model Opportunity {
   organizer    OrganizationProfile @relation(fields: [organizerId], references: [id], onDelete: Cascade)
 
   applications Application[]
+
   @@index([organizerId, createdAt, id])
   @@index([status, createdAt, id])
   @@index([createdAt, id])
-
+  @@index([status, date])
 }
 
 model Application {
@@ -153,6 +155,7 @@ model Application {
 
   rating         Rating?
 
+  @@index([volunteerId, status])
   @@unique([opportunityId, volunteerId])
   @@index([volunteerId, status, createdAt, id])
 
@@ -202,9 +205,18 @@ model Notification {
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
 
+  dedupeKey String? @unique
+
   userId String
   user   User   @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt, id])
   @@index([userId, read])
+  @@index([userId, read, createdAt])
+}
 
+model RateLimit {
+  key String @id
+  count Int @default(0)
+  expiresAt DateTime
 }

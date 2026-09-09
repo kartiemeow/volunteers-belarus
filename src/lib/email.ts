@@ -47,7 +47,7 @@ async function sendViaSmtp(to: string, subject: string, html: string): Promise<v
     html,
   };
 
-  const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
     host, port, secure, auth: { user, pass },
     dnsTimeout: 10_000, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 15_000,
   });

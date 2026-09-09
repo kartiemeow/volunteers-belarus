@@ -24,7 +24,7 @@ export function RescheduleOpportunityForm({
       <input type="hidden" name="id" value={opportunityId} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
-          label="Новая дата и время"
+          label="Новая дата и время (Минск)"
           name="date"
           type="datetime-local"
           defaultValue={currentDate}

@@ -25,12 +25,16 @@ export default function BelarusMap({
   activeCategory,
   activeQuery,
   totalCount,
+  organizer = "",
+  archive = false,
 }: {
   cities: MapCity[];
   activeCity: string;
   activeCategory: string;
   activeQuery: string;
   totalCount: number;
+  organizer?: string;
+  archive?: boolean;
 }) {
   const router = useRouter();
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -97,6 +101,8 @@ export default function BelarusMap({
   function selectCity(city: string) {
     const next = city === activeCity ? "" : city;
     const params = new URLSearchParams();
+    if (organizer) params.set("organizer", organizer);
+    if (archive) params.set("archive", "1");
     if (activeCategory) params.set("category", activeCategory);
     if (activeQuery) params.set("q", activeQuery);
     if (next) params.set("city", next);

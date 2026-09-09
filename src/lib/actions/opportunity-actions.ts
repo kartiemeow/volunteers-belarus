@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { parseEventDate } from "@/lib/dates";
 import { CATEGORY_ORDER } from "@/lib/constants";
 
 export type OpportunityFormState =
@@ -13,15 +14,15 @@ export type OpportunityFormState =
   | undefined;
 
 const createOpportunitySchema = z.object({
-  title: z.string().min(5, "Название должно быть не короче 5 символов"),
-  description: z.string().min(20, "Опишите заявку подробнее (минимум 20 символов)"),
+  title: z.string().trim().max(200).min(5, "Название должно быть не короче 5 символов"),
+  description: z.string().trim().max(10000).min(20, "Опишите заявку подробнее (минимум 20 символов)"),
   category: z.enum(CATEGORY_ORDER),
   city: z.string().min(2, "Укажите город"),
   address: z.string().optional().or(z.literal("")),
   date: z.string().min(1, "Укажите дату"),
   slots: z.coerce.number().int().min(1).max(1000),
   requirements: z.string().optional().or(z.literal("")),
-  contactInfo: z.string().optional().or(z.literal("")),
+  contactInfo: z.string().trim().min(1, "Укажите контакт для связи").max(500),
 });
 
 export async function createOpportunity(
@@ -52,10 +53,9 @@ export async function createOpportunity(
   const { title, description, category, city, address, date, slots, requirements, contactInfo } =
     parsed.data;
 
-  const isoDate = new Date(date);
-  const yesterday = Date.now() - 24 * 60 * 60 * 1000;
-  if (isoDate.getTime() < yesterday) {
-    return { error: "Дата не может быть в прошлом" };
+  const isoDate = parseEventDate(date);
+  if (!isoDate || isoDate <= new Date()) {
+    return { error: "Укажите будущие дату и время по Минску" };
   }
 
   const opportunity = await db.opportunity.create({
