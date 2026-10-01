@@ -12,15 +12,16 @@ import { sendVerificationEmail } from "@/lib/email";
 import { prepareRegistrationCode, completeRegistration } from "@/lib/registration";
 import { allowAuthRequest } from "@/lib/rate-limit";
 import { actionError } from "@/lib/action-result";
+import { belarusCityOptionalSchema, passwordSchema } from "@/lib/validation-schemas";
 
 const emailSchema = z.string().trim().toLowerCase().email("Введите корректный email").max(254);
 const registerSchema = z.object({
   name: z.string().trim().min(2, "Введите имя (минимум 2 символа)").max(150),
   email: emailSchema,
-  password: z.string().min(8, "Пароль должен быть не короче 8 символов").max(72),
+  password: passwordSchema,
   role: z.enum(["VOLUNTEER", "ORGANIZER"]),
   phone: z.string().max(50).optional(),
-  city: z.string().max(150).optional(),
+  city: belarusCityOptionalSchema,
 });
 export type RegisterState = { error?: string; success?: string; message?: string } | undefined;
 

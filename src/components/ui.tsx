@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { BELARUS_CITIES } from "@/lib/constants";
+import { CITY_MESSAGE, isBelarusCity, normalizeBelarusCity } from "@/lib/validation";
 
 export function Input({
   label,
@@ -18,6 +19,8 @@ export function Input({
   inputMode,
   pattern,
   maxLength,
+  minLength,
+  title,
   autoFocus,
 }: {
   label: string;
@@ -33,6 +36,8 @@ export function Input({
   inputMode?: "numeric" | "tel" | "email" | "text";
   pattern?: string;
   maxLength?: number;
+  minLength?: number;
+  title?: string;
   autoFocus?: boolean;
 }) {
   return (
@@ -53,6 +58,8 @@ export function Input({
         inputMode={inputMode}
         pattern={pattern}
         maxLength={maxLength}
+        minLength={minLength}
+        title={title}
         autoFocus={autoFocus}
         className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
@@ -151,19 +158,26 @@ export function CityInput({
 }) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [show, setShow] = useState(false);
+  const [touched, setTouched] = useState(false);
   const [hi, setHi] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const query = value.trim();
   const matched = useMemo(() => {
-    const q = value.trim().toLowerCase();
+    const q = query.toLowerCase();
     if (!q) return BELARUS_CITIES.slice();
     return BELARUS_CITIES.filter((c) => c.toLowerCase().includes(q));
-  }, [value]);
+  }, [query]);
 
-  const pick = (city: string, close = true) => {
-    setValue(city);
-    if (close) setShow(false);
-    setHi(-1);
-  };
+  // Пустое значение допустимо только для необязательного поля, всё остальное
+  // должно точно совпадать с городом из списка.
+  const invalidMessage = query === "" || isBelarusCity(query) ? "" : CITY_MESSAGE;
+  const showError = touched && invalidMessage !== "";
+
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(invalidMessage);
+  }, [invalidMessage]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -175,6 +189,13 @@ export function CityInput({
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  const pick = (city: string, close = true) => {
+    setValue(city);
+    if (close) setShow(false);
+    setHi(-1);
+    setTouched(true);
+  };
+
   return (
     <div className="block">
       <span className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -182,17 +203,25 @@ export function CityInput({
       </span>
       <div ref={wrapRef} className="relative">
         <input
+          ref={inputRef}
           type="text"
           name={name}
           required={required}
           value={value}
           autoComplete="off"
+          placeholder="Начните вводить город"
+          aria-invalid={showError || undefined}
           onChange={(e) => {
             setValue(e.target.value);
             setShow(true);
             setHi(-1);
           }}
           onFocus={() => setShow(true)}
+          onBlur={() => {
+            setTouched(true);
+            if (isBelarusCity(value)) setValue(normalizeBelarusCity(value));
+            setShow(false);
+          }}
           onKeyDown={(e) => {
             if (!show) return;
             if (e.key === "ArrowDown" && hi < matched.length - 1) {
@@ -212,30 +241,41 @@ export function CityInput({
               setShow(false);
             }
           }}
-          className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          className={`w-full rounded-lg border bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 ${
+            showError
+              ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
+              : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500/20"
+          }`}
         />
-        {show && matched.length > 0 && (
+        {show && (
           <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-            {matched.map((city, i) => (
-              <li key={city}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    pick(city);
-                  }}
-                  onMouseEnter={() => setHi(i)}
-                  className={`block w-full px-3.5 py-2 text-left text-sm ${
-                    i === hi ? "bg-emerald-50 text-emerald-700" : "text-gray-700"
-                  }`}
-                >
-                  {city}
-                </button>
+            {matched.length === 0 ? (
+              <li className="px-3.5 py-2 text-sm text-gray-500">
+                Такого города нет в списке
               </li>
-            ))}
+            ) : (
+              matched.map((city, i) => (
+                <li key={city}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pick(city);
+                    }}
+                    onMouseEnter={() => setHi(i)}
+                    className={`block w-full px-3.5 py-2 text-left text-sm ${
+                      i === hi ? "bg-emerald-50 text-emerald-700" : "text-gray-700"
+                    }`}
+                  >
+                    {city}
+                  </button>
+                </li>
+              ))
+            )}
           </ul>
         )}
       </div>
+      {showError && <p className="mt-1 text-sm text-red-600">{CITY_MESSAGE}</p>}
     </div>
   );
 }

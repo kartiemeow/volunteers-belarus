@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { registerUser } from "@/lib/actions/auth-actions";
 import { Input, PhoneInput, CityInput, FormMessage } from "@/components/ui";
+import { PASSWORD_HINT, PASSWORD_MESSAGE, PASSWORD_PATTERN } from "@/lib/validation";
 import type { RegisterState } from "@/lib/actions/auth-actions";
 
 export default function RegisterForm({
@@ -60,7 +61,20 @@ export default function RegisterForm({
           placeholder={role === "VOLUNTEER" ? "Как к вам обращаться" : "Например, центр «Надежда»"}
         />
         <Input label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-        <Input label="Пароль" name="password" type="password" required autoComplete="new-password" placeholder="Минимум 8 символов" />
+        <div>
+          <Input
+            label="Пароль"
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            pattern={PASSWORD_PATTERN}
+            title={PASSWORD_MESSAGE}
+            autoComplete="new-password"
+            placeholder={PASSWORD_HINT}
+          />
+          <p className="mt-1 text-xs text-gray-500">{PASSWORD_HINT}</p>
+        </div>
         <PhoneInput label="Телефон (необязательно)" name="phone" />
         <CityInput label="Город (необязательно)" name="city" />
       </div>

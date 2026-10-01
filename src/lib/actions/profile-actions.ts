@@ -7,13 +7,14 @@ import { transaction } from "@/lib/transaction";
 import { actionError } from "@/lib/action-result";
 import { auth } from "@/lib/auth";
 import { CATEGORY_ORDER } from "@/lib/constants";
+import { belarusCityOptionalSchema } from "@/lib/validation-schemas";
 
 export type ProfileState = { error?: string; success?: string } | undefined;
 
 const volunteerProfileSchema = z.object({
   name: z.string().min(2, "Имя должно быть не короче 2 символов"),
   phone: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
+  city: belarusCityOptionalSchema,
   bio: z.string().max(1000).optional().or(z.literal("")),
   skills: z.string().max(1000).optional().or(z.literal("")),
   interests: z.array(z.enum(CATEGORY_ORDER)).optional(),

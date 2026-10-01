@@ -14,6 +14,7 @@ function actions(role: string) {
     zod: { z }, "next/cache": { revalidatePath() {} },
     "@/lib/auth": { auth: async () => ({ user: { id: "user", role } }) },
     "@/lib/constants": { CATEGORY_ORDER: ["SHELTER", "ELDERLY", "PSO", "URBAN"] },
+    "@/lib/validation-schemas": { belarusCityOptionalSchema: z.string().max(150).optional() },
     "@/lib/transaction": { transaction() { throw new Error("Unauthorized database write"); } },
     "@/lib/action-result": { actionError(error: Error) { throw error; } },
   };
