@@ -53,6 +53,21 @@ const transporter = nodemailer.createTransport({
   });
   try {
     await transporter.sendMail(mail);
+  } catch (e) {
+    // Пароль намеренно не логируется. code/command/response показывают реальный
+    // ответ SMTP-сервера, из-за которого доставка не удалась.
+    const err = e as { code?: string; command?: string; response?: string };
+    console.error("[email] SMTP-отправка не удалась", {
+      code: err.code,
+      command: err.command,
+      response: err.response,
+      host,
+      port,
+      secure,
+      user,
+      from: fromEmail,
+    });
+    throw e;
   } finally {
     transporter.close();
   }
